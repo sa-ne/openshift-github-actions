@@ -1,0 +1,61 @@
+name: remove-cluster
+
+on:
+  workflow_dispatch:
+    inputs:
+      region:
+        description: 'AWS Region to deploy cluster to'
+        required: true
+        default: 'us-east-1'          
+      s3_storage:
+        description: 'Name AWS S3 storage bucket'
+        required: true
+        default: 'ocp-s3-storage'        
+      clusterConfigName:
+        description: 'Name of cluster config in S3 to pull down and destroy'
+        required: true         
+
+jobs:
+  remove-openshift-cluster:
+    runs-on: macos-latest
+    env:
+      ocpVersion: 'stable'
+      temp_dir: "temp-${{ github.run_number }}"
+    steps:
+      - name: "Checkout ${{ github.ref }}"
+        uses: actions/checkout@master
+        with:
+          ref: ${{ github.ref }}
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ github.event.inputs.region }}
+
+      - name: Install OpenShift CLI
+        uses: redhat-actions/oc-installer@v1
+
+      - name: Download OpenShift installer and update permissions
+        shell: bash
+        run: |
+          mkdir -p ./${{ env.lcl_install_dir }}
+          echo "Downloading OpenShift Installer..."
+          wget -q https://mirror.openshift.com/pub/openshift-v4/clients/ocp/${{ env.ocpVersion }}/openshift-install-mac.tar.gz
+          tar -xvzf openshift-install-mac.tar.gz
+          echo "Update permissions to executable on the openshift-installer..."
+          chmod +x ./openshift-install
+          echo "OCP_VERSION=$(./openshift-install version | head -n 1)" >> $GITHUB_ENV
+
+      - name: Get cluster metadata files from S3
+        shell: bash
+        run: |
+          mkdir -p ./${{ env.temp_dir }}
+          echo "Downloading ${{ github.event.inputs.clusterConfigName }} metadata files from S3..."
+          aws s3 sync s3://${{ github.event.inputs.s3_storage }}/${{ github.event.inputs.clusterConfigName }} ./${{ env.temp_dir }} --region ${{ github.event.inputs.region }} 
+
+      - name: Destroy cluster
+        shell: bash
+        run: |
+           ./openshift-install destroy cluster --dir=./${{ env.temp_dir }}

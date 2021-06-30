@@ -1,0 +1,21 @@
+apiVersion: operator.openshift.io/v1
+kind: Network
+metadata:
+  creationTimestamp: null
+  name: cluster
+spec: 
+  clusterNetwork: 
+  - cidr: ${cidrClusterNetwork}
+    hostPrefix: ${hostPrefix}
+  externalIP:
+    policy: {}
+  serviceNetwork:
+  - ${serviceNetwork}
+  defaultNetwork:
+    type: OVNKubernetes 
+    ovnKubernetesConfig:
+      hybridOverlayConfig:
+        hybridClusterNetwork: 
+        - cidr: ${cidrhybridClusterNetwork}
+          hostPrefix: ${hostPrefix}
+status: {}

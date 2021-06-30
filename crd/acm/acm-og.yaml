@@ -1,0 +1,8 @@
+apiVersion: operators.coreos.com/v1
+kind: OperatorGroup
+metadata:
+  name: openshift-advanced-cluster-mgmt
+  namespace: openshift-advanced-cluster-mgmt
+spec:
+  targetNamespaces:
+  - openshift-advanced-cluster-mgmt

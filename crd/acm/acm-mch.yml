@@ -1,0 +1,7 @@
+apiVersion: operator.open-cluster-management.io/v1
+kind: MultiClusterHub
+metadata:
+  name: multiclusterhub
+  namespace: openshift-advanced-cluster-mgmt
+spec:
+  imagePullSecret: acm-pullsecret

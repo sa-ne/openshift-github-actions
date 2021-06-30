@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: ${containerName}
+  name: ${containerName}-${id}
+  namespace: ${projectName}
+spec:
+  selector:
+    matchLabels:
+      app: ${containerName}
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: ${containerName}
+      name: ${containerName}-${id}
+    spec:
+      containers:
+      - name: ${containerName}-${id}
+        image: ${containerImage}
+        imagePullPolicy: IfNotPresent
+        command:
+        - powershell.exe
+        - -command
+        - "Add-WindowsFeature Web-Server; Invoke-WebRequest -UseBasicParsing -Uri 'https://dotnetbinaries.blob.core.windows.net/servicemonitor/2.0.1.6/ServiceMonitor.exe' -OutFile 'C:\\ServiceMonitor.exe'; echo '<html><body><br/><br/><marquee><H1>Hello OpenShift!!!<H1><marquee></body><html>' > C:\\inetpub\\wwwroot\\default.html; C:\\ServiceMonitor.exe 'w3svc'; "
+        securityContext:
+        securityContext:
+          windowsOptions:
+            runAsUserName: "ContainerAdministrator"
+      nodeSelector:
+        kubernetes.io/os: windows
+      tolerations:
+        - key: "os"
+          operator: "Equal"
+          value: "Windows"
+          effect: "NoSchedule"

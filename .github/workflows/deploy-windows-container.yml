@@ -1,0 +1,68 @@
+name: deploy-windows-container
+
+on:
+  workflow_dispatch:
+    inputs:
+      projectName:
+        description: 'Namespace in OpenShift where container will be deployed'
+        required: true
+        default: 'windows-workloads'
+      containerName:
+        description: 'Name of container'
+        required: true
+        default: 'win-webserver'
+      containerImage:
+        description: 'Image name and tag that is used for docker pull'
+        required: true
+        default: 'mcr.microsoft.com/windows/servercore:1809'
+      s3_storage:
+        description: 'Name AWS S3 storage bucket'
+        required: true
+        default: 'dina-s3-storage'
+      clusterConfigName:
+        description: 'Folder name of cluster config in S3 to pull down for auth'
+        required: true
+
+jobs:
+  deploy-windows-container:
+    runs-on: macos-latest
+    env:
+      temp_dir: "temp-${{ github.run_number }}"
+
+    steps:
+      - name: "Checkout ${{ github.ref }}"
+        uses: actions/checkout@master
+        with:
+          ref: ${{ github.ref }}
+
+      - name: Install OpenShift CLI
+        uses: redhat-actions/oc-installer@v1
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        env:
+          aws_region: us-east-1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.aws_region }}
+
+      - name: Get cluster metadata files from S3
+        shell: bash
+        run: |
+          mkdir -p ./${{ env.temp_dir }}
+          echo "Downloading ${{ github.event.inputs.clusterConfigName }} metadata files from S3..."
+          aws s3 sync s3://${{ github.event.inputs.s3_storage }}/${{ github.event.inputs.clusterConfigName }} ./${{ env.temp_dir }} --region us-east-1 
+
+      - name: Parameterize windows container
+        shell: bash
+        run: |
+          export KUBECONFIG=$(pwd)/${{ env.temp_dir }}/auth/kubeconfig
+          oc login -u ${{ secrets.OC_USER }} -p ${{ secrets.OC_PASSWORD }}
+          export projectName=${{ github.event.inputs.projectName }}
+          export containerName=${{ github.event.inputs.containerName }}
+          export containerImage=${{ github.event.inputs.containerImage }}
+          export id=${{ github.run_number }}
+          envsubst < ./crd/windows-container-template.yaml >> ./${{ env.temp_dir }}/windows-container.yaml
+          oc apply -f ./${{ env.temp_dir }}/windows-container.yaml
+          oc wait --for=condition=complete --timeout=300s deployment/${{ github.event.inputs.containerName }}-${{ github.run_number }}

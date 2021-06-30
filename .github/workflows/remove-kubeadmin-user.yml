@@ -1,0 +1,48 @@
+name: remove-kubeadmin-user
+
+on:
+  workflow_dispatch:
+    inputs:
+      subDomain:
+        description: 'sub domain to create cert for, will be combined with base domain secret'
+        required: true
+      s3_storage:
+        description: 's3 storage bucket name'
+        required: true
+        default: 'dina-s3-storage'
+      aws_region:
+        description: 'aws region'
+        required: true
+        default: 'us-east-1'
+
+jobs:
+  remove-kubeadmin-user:
+    runs-on: macos-latest
+    steps:
+      - name: "Checkout ${{ github.ref }}"
+        uses: actions/checkout@master
+        with:
+          ref: ${{ github.ref }}
+
+      - name: Install OpenShift CLI
+        uses: redhat-actions/oc-installer@v1
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ github.event.inputs.aws_region }}
+
+      - name: Use htpasswd as oauth, add OC_USER as cluster admin and removing kubeadmin user
+        shell: bash
+        run: |
+          aws s3 cp s3://${{ github.event.inputs.s3_storage }}/${{ github.event.inputs.subDomain }}/auth ./ --region ${{ github.event.inputs.aws_region }} --quiet
+          export KUBECONFIG=./auth/kubeconfig
+          oc login -u ${{ secrets.OCP_INIT_USER }} -p ${{ secrets.OC_INIT_PASSWORD }}
+          htpasswd -c -B -b users.htpasswd ${{ secrets.OC_USER }} ${{ secrets.OC_PASSWORD }}
+          oc create secret generic htpass-secret --from-file=htpasswd=./users.htpasswd> -n openshift-config
+          oc apply -f ./crd/htpasswd-oauth.yml
+          oc create clusterrolebinding registry-controller --clusterrole=cluster-admin --user=${{ secrets.OC_USER }}
+          oc adm policy add-cluster-role-to-user cluster-admin ${{ secrets.OC_USER }}
+          oc delete secrets kubeadmin -n kube-system

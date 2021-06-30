@@ -1,0 +1,89 @@
+name: deploy-acm
+
+on:
+  workflow_dispatch:
+    inputs:
+      ocpAPI:
+        description: 'OpenShift API endpoint (eg. https://api.ocp-15.sandbox1900.opentlc.com:6443)'    
+        required: true
+
+jobs:
+  deploy-acm:
+    runs-on: macos-latest
+    env:
+      lcl_install_dir: windows-node-deployment-${{ github.run_number }}
+
+    steps:
+      - name: "Checkout ${{ github.ref }}"
+        uses: actions/checkout@master
+        with:
+          ref: ${{ github.ref }}
+
+      - name: Install OpenShift CLI
+        uses: redhat-actions/oc-installer@v1
+
+      - name: Authenticate with OpenShift
+        uses: redhat-actions/oc-login@v1
+        with:
+          openshift_server_url: ${{ github.event.inputs.ocpAPI }}
+          openshift_username: ${{ secrets.OC_USER }}
+          openshift_password: ${{ secrets.OC_PASSWORD }}
+          insecure_skip_tls_verify: true
+
+      - name: Install ACM Operator
+        shell: bash
+        run: |
+          oc apply -f ./crd/acm/acm-namespace.yaml
+          oc apply -f ./crd/acm/acm-og.yaml
+          oc apply -f ./crd/acm/acm-sub.yaml
+
+          sleep 60
+          oc project openshift-advanced-cluster-mgmt
+          TIMEOUT=0 
+          acm_subs_status=$(oc get csv -n openshift-advanced-cluster-mgmt -o jsonpath='{.items[0].status.phase}')
+          while [ "$acm_subs_status" != "Succeeded" ]; do
+            echo "ACM operator still being deployed. Waiting one more minute..."
+            sleep 60
+
+            if [ $TIMEOUT -gt 15 ]; then #15 MINUTES TIMEOUT
+              echo "Timeout reached... Check the status of ACM deployment on OpenShift."
+              exit 1
+            fi
+            TIMEOUT=$(($TIMEOUT+1))
+            acm_subs_status=$(oc get csv -n openshift-advanced-cluster-mgmt -o jsonpath='{.items[0].status.phase}')
+          done
+          
+          echo "ACM Operator Deployment Finished"
+
+      - name: Creating Pull-secret on ACM namespace
+        shell: bash
+        run: |
+          echo '${{ secrets.PULL_SECRET }}' > pull-secret.txt
+          oc create secret generic acm-pullsecret -n openshift-advanced-cluster-mgmt --from-file=.dockerconfigjson=pull-secret.txt --type=kubernetes.io/dockerconfigjson -n openshift-advanced-cluster-mgmt
+
+      - name: Deploy MultiClusterHub
+        shell: bash
+        run: |
+          oc apply -f ./crd/acm/acm-mch.yml
+          sleep 120 # WAITING 2 MINUTES FOR MCH DEPLOYMENT
+
+      - name: Verify ACM status
+        shell: bash
+        run: |
+          TIMEOUT=0 
+
+          mch_status=$(oc get MultiClusterHub multiclusterhub -n openshift-advanced-cluster-mgmt -o jsonpath='{.status.phase}')
+          while [ "$mch_status" != "Running" ]; do
+            echo "MultiClusterHub still being deployed. Waiting one more minute..."
+            sleep 60
+
+            if [ $TIMEOUT -gt 15 ]; then #15 MINUTES TIMEOUT
+              echo "Timeout reached... Check the status of ACM deployment on OpenShift."
+              exit 1
+            fi
+            TIMEOUT=$(($TIMEOUT+1))
+            mch_status=$(oc get MultiClusterHub multiclusterhub -n openshift-advanced-cluster-mgmt -o jsonpath='{.status.phase}')
+          done
+          
+          echo "ACM Deployment Finished"
+
