@@ -10,9 +10,8 @@ on:
         description: 'sub domain to create cert for, will be combined with base domain secret'
         required: true
       s3_storage:
-        description: 's3 storage bucket name'
+        description: 'AWS S3 storage bucket name (i.e. ocp-s3-storage)'
         required: true
-        default: 'dina-s3-storage'
 
 jobs:
   configure-ssl:
