@@ -10,7 +10,7 @@ In order to use the workflows and actions, you must fork this repo first.  A for
 
 ---
 #### Set security for Actions after creating a fork
-By default, when forking a new repository, all actions are allowed.  To better protect yourself, change the Action Permissions to `Allow select actions` and whitelist the specified actions.  For this code, the follow actions need to be whitelisted:
+By default, when forking a new repository, all actions are allowed.  To better protect yourself, change the Action Permissions to `Allow select actions` and whitelist the specified actions.  For this code, the following actions need to be whitelisted:
 ```
 actions/*,
 aws-actions/*,
@@ -24,7 +24,7 @@ Additionally, you may want to update the `Workflow permissions` on the bottom of
 
 ---
 
-**WARNING**: By default, Actions logs are pubic. Anyone can view them.
+**WARNING**: By default, Actions logs are public. Anyone can view them.
 
 ---
 #### Create required Repository Secrets
