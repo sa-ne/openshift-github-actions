@@ -211,3 +211,4 @@ jobs:
           privkey="${{github.workspace}}/certbot-config/live/${{ env.cert_name }}/privkey.pem"
           oc create secret tls router-certs --cert=$fullchain --key=$privkey -n openshift-ingress
           oc patch ingresscontroller default -n openshift-ingress-operator --type=merge --patch='{"spec": { "defaultCertificate": { "name": "router-certs" }}}'
+          echo "OpenShift login available at: https://console-openshift-console.apps.${{ github.event.inputs.clusterNamePrefix }}-${{ github.run_number }}.${{ github.event.inputs.baseDomain }}"
