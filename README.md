@@ -134,7 +134,7 @@ This application consists of:
 
 ##### Can I use the Actions with RHPDS Open Environments?
 
-Yes!  Ensure the secrets are set accordingly on your fork.
+- Yes, absolutely!
 
 ##### What is the difference between the `s3_storage` input and the `clusterConfigName`?
 
