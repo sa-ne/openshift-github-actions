@@ -58,7 +58,7 @@ To populate the Actions on your fork, they must be enabled.
 
 ### deploy-openshift.yml
 
-- Deploy a specified version of OpenShift to AWS.  
+- Deploy a specified version of OpenShift to AWS, creating a "bare-bones" OpenShift instance.
 - All deployment metadata is stored in an S3 bucket created in the beginning of the workflow.
 - The kubeadmin user is removed and the `OC_USER` is created.
 - SSH keys are generated, keys are sent to the S3 storage bucket.
