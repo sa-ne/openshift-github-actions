@@ -54,9 +54,9 @@ To populate the Actions on your fork, they must be enabled.
 
 ![enable workflows](/assets/images/enable_workflows_on_fork.png)
 
-## Workflows
+## Available Workflows/Actions
 
-### deploy-openshift.yml
+### deploy-openshift
 
 - Deploy a specified version of OpenShift to AWS, creating a "bare-bones" OpenShift instance.
 - All deployment metadata is stored in an S3 bucket created in the beginning of the workflow.
@@ -72,7 +72,7 @@ For a cluster that supports Windows containers, update the `networkType` to `OVN
 ### deploy-acm
 
 - Deploys the ACM operator
-- Creates pull-secret
+- Creates a pull-secret associated with ACM
 
 ---
 
@@ -80,7 +80,9 @@ For a cluster that supports Windows containers, update the `networkType` to `OVN
 
 **This job still needs to be tested**
 
-Assuming the cluster is in AWS, using route 53 this job will use certbot + let's encrypt to act as a CA to sign the certificate.  The certificate that is provisioned with OpenShift, while it is encrypted, it will show "un-secure" on a browser until signed by a CA due to how the certificate chain works.
+Assuming the cluster is in AWS, using route 53 this job will use certbot + let's encrypt to act as a CA to sign the certificate.  
+
+The certificate that is provisioned with OpenShift, while it is encrypted, it will show "un-secure" on a browser until signed by a CA due to how the certificate chain works.
 
 ---
 
@@ -96,7 +98,7 @@ Assuming the cluster is in AWS, using route 53 this job will use certbot + let's
 
 ### remove-cluster
 
-Destroy an OpenShift cluster using the metadata files from the deployment sourced from an S3 bucket.
+Destroy an OpenShift cluster using the metadata files from the deployment sourced from S3.
 
 ---
 
@@ -107,18 +109,18 @@ Destroy an OpenShift cluster without relying on any metadata from the original d
 ---
 ### prepull-windows-image
 
-- Prepull the Windows container image on the MachineSet.
+- Pre-pull the Windows container image on the MachineSet.
 
 
-Until the timeout is increased to 30 minutes for pulling an image, all Windows images need to be pull in advance of the container deployment
+Until the timeout is increased to 30 minutes for pulling an image, all Windows images need to be pulled in advance of the container deployment
 
-This workflow assumes you have the metadata from the install and the ssh key used to configure the WMCO in S3 storage.
+This workflow assumes you have the metadata from the install and the ssh key used to configure the WMCO in S3.
 
 ---
 
 ### deploy-netcandystore
 
-Deploy the [NetCandy Store](http://people.redhat.com/chernand/windows-containers-quickstart/ns-intro/) a mixed environment consisting of Windows Containers and Linux Container using helm.
+Deploy the [NetCandy Store](http://people.redhat.com/chernand/windows-containers-quickstart/ns-intro/) a mixed environment consisting of Windows Containers and Linux Containers using helm.
 
 _NOTE: The helm install supports Windows Server 2019 Datacenter 1809_
 
