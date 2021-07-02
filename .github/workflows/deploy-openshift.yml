@@ -68,7 +68,7 @@ jobs:
         shell: bash
         run: |
           echo ${{ github.event.inputs.s3_storage }}
-          aws_ls_result=$(aws s3 ls "s3://${{ github.event.inputs.s3_storage }}" 2>&1)
+          aws_ls_result=$(aws s3 ls "s3://ocp-s3-storage" 2>&1) || true
           echo $aws_ls_result
           if [[ $aws_ls_result = *NoSuchBucket* ]]
           then
