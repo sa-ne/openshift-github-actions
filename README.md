@@ -6,7 +6,7 @@ This code is meant to show working examples of deploying OpenShift and OpenShift
 This code is meant to show a low barrier to entry for automation in regards to deploying OpenShift and OpenShift components in AWS.  Beware! Some jobs may not demonstrate best practices.
 ## How to use
 
-In order to use the workflows and actions, you must fork this repo first.  A fork is required because you will need to secrets in order for the workflows to complete successfully.  Only owners/administrators can edit secrets on repositories.
+In order to use the workflows and actions, you must fork this repo first.  A fork is required because you will need to set secrets in order for the workflows to complete successfully.  Only owners/administrators can edit secrets on repositories.
 
 ---
 #### Set security for Actions after creating a fork
