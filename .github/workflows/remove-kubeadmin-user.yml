@@ -7,13 +7,11 @@ on:
         description: 'sub domain to create cert for, will be combined with base domain secret'
         required: true
       s3_storage:
-        description: 's3 storage bucket name'
+        description: 'AWS S3 storage bucket name (i.e. ocp-s3-storage)'
         required: true
-        default: 'dina-s3-storage'
       aws_region:
         description: 'aws region'
         required: true
-        default: 'us-east-1'
 
 jobs:
   remove-kubeadmin-user:

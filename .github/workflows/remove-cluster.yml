@@ -6,14 +6,12 @@ on:
       region:
         description: 'AWS Region to deploy cluster to'
         required: true
-        default: 'us-east-1'          
       s3_storage:
-        description: 'Name AWS S3 storage bucket'
+        description: 'AWS S3 storage bucket name (i.e. ocp-s3-storage)'
         required: true
-        default: 'ocp-s3-storage'        
       clusterConfigName:
-        description: 'Name of cluster config in S3 to pull down and destroy'
-        required: true         
+        description: 'Folder name of cluster config in S3 to pull down for auth.  Example: ocp-[run_number]'
+        required: true
 
 jobs:
   remove-openshift-cluster:
