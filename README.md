@@ -42,8 +42,6 @@ Add the following secrets to the `Repository secrets`.  Once created, the secret
 
 `OC_PASSWORD`: Password associated with `OC_USER`.
 
-`baseDomain`: The base domain for the cluster. [_This will be moved to a variable eventually._]
-
 To set secrets, go to `Settings`, `Secrets`, ` New repository secret` (_note: not all secrets that should be set are shown in the screen grab_):
 
 ![setting secrets](/assets/images/setting_secrets.png)

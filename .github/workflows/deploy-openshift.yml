@@ -15,7 +15,7 @@ on:
         required: true
         default: 'stable'
       baseDomain:
-        description: 'Base domain to deploy the cluster'
+        description: 'Base domain to deploy the cluster (i.e. sandbox772.opentlc.com)'
         required: true
       clusterNamePrefix:
         description: 'Cluster name prefix will get combined with the github run number'
