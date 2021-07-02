@@ -65,7 +65,14 @@ To populate the Actions on your fork, they must be enabled.
 - The OpenShift cluster certificate, by default will encrypt traffic.  However it is not signed by a CA so it will appear insecure in the browser.  If you check the cert on [SSL checker](https://www.sslshopper.com/ssl-checker.html), it will show secure until the very end of the chain by default.  This job will finish securing the certificate by using Let's Encrypt via the route53 plugin.
 
 #### To support Windows containers
-For a cluster that supports Windows containers, update the `networkType` to `OVNKubernetes` when inputting parameters for the `deploy-openshift` Action.
+For a cluster that supports Windows containers, update the `networkType` to `OVNKubernetes` when inputting parameters for the `deploy-openshift` Action.  _NOTE:_ No Windows machineSets are deployed with this workflow.
+
+---
+
+### deploy-acm
+
+- Deploys the ACM operator
+- Creates pull-secret
 
 ---
 
@@ -79,9 +86,11 @@ Assuming the cluster is in AWS, using route 53 this job will use certbot + let's
 
 ### remove-kubeadmin-user
 
-Removes the kubeadmin user, sets htpasswd as oauth and uses the OC_USER and OC_PASSWORD secrets to configure a new user.
-
 **This job still needs to be tested**
+
+- Removes the kubeadmin user
+- Sets htpasswd as oauth
+- Uses the OC_USER and OC_PASSWORD secrets to configure a new user.
 
 ---
 
@@ -98,7 +107,10 @@ Destroy an OpenShift cluster without relying on any metadata from the original d
 ---
 ### prepull-windows-image
 
-Prepull the Windows container image on the MachineSet.  Until the timeout is increased to 30 minutes for pulling an image, all Windows images need to be pull in advance of the actual container deployment
+- Prepull the Windows container image on the MachineSet.
+
+
+Until the timeout is increased to 30 minutes for pulling an image, all Windows images need to be pull in advance of the container deployment
 
 This workflow assumes you have the metadata from the install and the ssh key used to configure the WMCO in S3 storage.
 
@@ -108,6 +120,8 @@ This workflow assumes you have the metadata from the install and the ssh key use
 
 Deploy the [NetCandy Store](http://people.redhat.com/chernand/windows-containers-quickstart/ns-intro/) a mixed environment consisting of Windows Containers and Linux Container using helm.
 
+_NOTE: The helm install supports Windows Server 2019 Datacenter 1809_
+
 This application consists of:
 
 - Windows Container running a .NET v4 frontend, which is consuming a backend service.
@@ -115,3 +129,21 @@ This application consists of:
 - Linux Container running a MSSql database.
 
 ---
+
+## Frequently Asked Questions
+
+##### Can I use the Actions with RHPDS Open Environments?
+
+Yes!  Ensure the secrets are set accordingly on your fork.
+
+##### What is the difference between the `s3_storage` input and the `clusterConfigName`?
+
+- The `s3_storage` input refers to the bucket name 
+- The `clusterConfigName` refers to the object
+
+![s3 screen grab](/assets/images/s3_storage_example.png)
+
+## Owners
+
+Giovanni Fontana (@giofontana)
+Dina Muscanell (@devopsdina)
