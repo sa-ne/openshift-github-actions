@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       clusterName:
-        description: 'Short name of cluster INCLUDING unquie id (i.e. ocp-test-01-a4j8a')
+        description: 'Short name of cluster INCLUDING unquie id (i.e. ocp-test-01-a4j8a)'
         required: true
       aws_region:
         description: 'region in aws'
@@ -14,7 +14,7 @@ on:
         required: true
 
 jobs:
-  force-remove-openshift-cluster:
+  force-remove-cluster:
     runs-on: macos-latest
     env:
       temp_dir: "temp-${{ github.run_number }}"
