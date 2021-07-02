@@ -7,9 +7,9 @@ This code is meant to show working examples of deploying OpenShift and OpenShift
 This code is meant to show a low barrier to entry for automation in regards to deploying OpenShift and OpenShift components in AWS.  Beware! Some jobs may not demonstrate best practices.
 
 ### Table of Contents
-**[How to use](#how-to-use)**
-**[Available Actions](#available-actions)**
-**[Frequently-Asked-Questions](#frequently-asked-questions)**
+**[How to use](#how-to-use)**<br>
+**[Available Actions](#available-actions)**<br>
+**[Frequently-Asked-Questions](#frequently-asked-questions)**<br>
 **[Maintainers](#maintainers)**<br>
 
 ## How-to-use
@@ -64,13 +64,13 @@ To populate the Actions on your fork, they must be enabled.
 
 ### Available-Actions
 
-**[deploy-openshift](#deploy-openshift)**
-**[deploy-acm](#deploy-acm)**
-**[configure-ssl-cert](#configure-ssl-cert)**
-**[remove-kubeadmin-user](#remove-kubeadmin-user)**
-**[remove-cluster](#remove-cluster)**
-**[force-remove-cluster](#force-remove-cluster)**
-**[prepull-windows-image](#prepull-windows-image)**
+**[deploy-openshift](#deploy-openshift)**<br>
+**[deploy-acm](#deploy-acm)**<br>
+**[configure-ssl-cert](#configure-ssl-cert)**<br>
+**[remove-kubeadmin-user](#remove-kubeadmin-user)**<br>
+**[remove-cluster](#remove-cluster)**<br>
+**[force-remove-cluster](#force-remove-cluster)**<br>
+**[prepull-windows-image](#prepull-windows-image)**<br>
 **[deploy-netcandystore](#deploy-netcandystore)**<br>
 
 ---
