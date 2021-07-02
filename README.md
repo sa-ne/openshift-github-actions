@@ -2,9 +2,17 @@
 
 This code is meant to show working examples of deploying OpenShift and OpenShift components using GitHub Actions.
 
+
 **DISCLAIMER** 
 This code is meant to show a low barrier to entry for automation in regards to deploying OpenShift and OpenShift components in AWS.  Beware! Some jobs may not demonstrate best practices.
-## How to use
+
+### Table of Contents
+**[How to use](#how-to-use)**
+**[Available Actions](#available-actions)**
+**[Frequently-Asked-Questions](#frequently-asked-questions)**
+**[Maintainers](#maintainers)**<br>
+
+## How-to-use
 
 In order to use the workflows and actions, you must fork this repo first.  A fork is required because you will need to set secrets in order for the workflows to complete successfully.  Only owners/administrators can edit secrets on repositories.
 
@@ -52,7 +60,20 @@ To populate the Actions on your fork, they must be enabled.
 
 ![enable workflows](/assets/images/enable_workflows_on_fork.png)
 
-## Available Workflows/Actions
+---
+
+### Available-Actions
+
+**[deploy-openshift](#deploy-openshift)**
+**[deploy-acm](#deploy-acm)**
+**[configure-ssl-cert](#configure-ssl-cert)**
+**[remove-kubeadmin-user](#remove-kubeadmin-user)**
+**[remove-cluster](#remove-cluster)**
+**[force-remove-cluster](#force-remove-cluster)**
+**[prepull-windows-image](#prepull-windows-image)**
+**[deploy-netcandystore](#deploy-netcandystore)**<br>
+
+---
 
 ### deploy-openshift
 
@@ -105,6 +126,7 @@ Destroy an OpenShift cluster using the metadata files from the deployment source
 Destroy an OpenShift cluster without relying on any metadata from the original deployment.  It is a destroy hack!
 
 ---
+
 ### prepull-windows-image
 
 - Pre-pull the Windows container image on the MachineSet.
@@ -130,7 +152,7 @@ This application consists of:
 
 ---
 
-## Frequently Asked Questions
+## Frequently-Asked-Questions
 
 ##### Can I use the Actions with RHPDS Open Environments?
 
@@ -143,7 +165,15 @@ This application consists of:
 
 ![s3 screen grab](/assets/images/s3_storage_example.png)
 
-## Owners
+##### Where can I find my pull-secret?
+
+Login to [cloud.redhat.com](cloud.redhat.com), select `OpenShift`, then `Downloads` and scroll to the bottom of the page where `Tokens` are listed.  Hit the `copy` button and then paste into your `PULL_SECRET` repository secret.
+
+![pull secret](/assets/images/pull_secret.png)
+
+---
+
+## Maintainers
 
 - Giovanni Fontana (@giofontana)
 - Dina Muscanell (@devopsdina)
