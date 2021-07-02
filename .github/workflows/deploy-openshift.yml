@@ -2,22 +2,21 @@ name: deploy-openshift
 
 on:
   workflow_dispatch:
-    inputs:  
+    inputs:
       region:
         description: 'AWS Region to deploy cluster to'
         required: true
-        default: 'us-east-1'        
       s3_storage:
         description: 'S3 storage bucket name to save installation config files'
         required: true
-        default: 'ocp-s3-storage'  
+        default: 'ocp-s3-storage'
       ocpVersion:
         description: 'OpenShift version to be installed (stable, 4.7.17)'
-        required: true   
-        default: 'stable'         
+        required: true
+        default: 'stable'
       baseDomain:
         description: 'Base domain to deploy the cluster'
-        required: true       
+        required: true
       clusterNamePrefix:
         description: 'Cluster name prefix will get combined with the github run number'
         required: true
@@ -29,14 +28,14 @@ on:
       workersFlavor:
         description: 'Workers default size'
         required: true
-        default: 'm5.xlarge'    
+        default: 'm5.xlarge'
       networkType:
         description: 'Network type to deploy for cluster (OpenShiftSDN, OVNKubernetes)'
         required: true
         default: 'OpenShiftSDN'
 
 jobs:
-  deploy-ocp:
+  deploy-openshift:
     runs-on: macos-latest
     env:
       lcl_install_dir: ${{ github.event.inputs.clusterNamePrefix }}-${{ github.run_number }}
@@ -46,7 +45,7 @@ jobs:
       cidrClusterNetwork: '10.128.0.0/14'
       serviceNetwork: '172.30.0.0/16'
       cidrMachineNetwork: '10.0.0.0/16'
-      cidrhybridClusterNetwork: '10.132.0.0/14'    
+      cidrhybridClusterNetwork: '10.132.0.0/14'
 
     steps:
       - name: "Checkout ${{ github.ref }}"
@@ -62,15 +61,18 @@ jobs:
         with:
           aws-access-key-id: "${{ secrets.AWS_ACCESS_KEY_ID }}"
           aws-secret-access-key: "${{ secrets.AWS_SECRET_ACCESS_KEY }}"
-          aws-region: ${{ github.event.inputs.region }}        
+          aws-region: "${{ github.event.inputs.region }}"
 
       - name: Create S3 bucket
         shell: bash
         run: |
-          if aws s3 ls "s3://${{ github.event.inputs.s3_storage }}" 2>&1 | grep -q 'NoSuchBucket'
-          then        
-            echo " *** BUCKET DOESN'T EXIST YET. CREATING S3 BUCKET *** "
-            if [ "${{ github.event.inputs.region }}" = "us-east-1" ]; then
+          aws_ls_result=$(aws s3 ls "s3://${{ github.event.inputs.s3_storage }}" 2>&1) || true
+
+          if [[ $aws_ls_result = *NoSuchBucket* ]]
+          then
+            echo " *** ${{ github.event.inputs.s3_storage }} BUCKET DOESN'T EXIST YET. CREATING S3 BUCKET *** "
+            if [ "${{ github.event.inputs.region }}" = "us-east-1" ]; 
+            then
               aws s3api create-bucket --bucket ${{ github.event.inputs.s3_storage }} --region ${{ github.event.inputs.region }} --acl private 
             else
               aws s3api create-bucket --bucket ${{ github.event.inputs.s3_storage }} --create-bucket-configuration LocationConstraint=${{ github.event.inputs.region }} --acl private 
@@ -78,7 +80,7 @@ jobs:
             aws s3api put-public-access-block --bucket ${{ github.event.inputs.s3_storage }} --public-access-block-configuration "BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true"
             echo "S3 Bucket ${{ github.event.inputs.s3_storage }} created on region ${{ github.event.inputs.region }}"
           else
-            echo " *** BUCKET ALREADY EXISTS *** "
+            echo " *** ${{ github.event.inputs.s3_storage }} BUCKET ALREADY EXISTS *** "
           fi
 
       - name: Create SSH key for cluster
@@ -209,3 +211,4 @@ jobs:
           privkey="${{github.workspace}}/certbot-config/live/${{ env.cert_name }}/privkey.pem"
           oc create secret tls router-certs --cert=$fullchain --key=$privkey -n openshift-ingress
           oc patch ingresscontroller default -n openshift-ingress-operator --type=merge --patch='{"spec": { "defaultCertificate": { "name": "router-certs" }}}'
+          echo "OpenShift login available at: https://console-openshift-console.apps.${{ github.event.inputs.clusterNamePrefix }}-${{ github.run_number }}.${{ github.event.inputs.baseDomain }}"

@@ -6,13 +6,11 @@ on:
       region:
         description: 'AWS Region to deploy cluster to'
         required: true
-        default: 'us-east-1'        
       s3_storage:
-        description: 'S3 storage bucket name to save installation config files'
+        description: 'AWS S3 storage bucket name (i.e. ocp-s3-storage)'
         required: true
-        default: 'ocp-s3-storage'    
       ocpAPI:
-        description: 'OpenShift API endpoint (eg. https://api.ocp-15.sandbox1900.opentlc.com:6443)'    
+        description: 'OpenShift API endpoint (eg. https://api.ocp-15.sandbox1900.opentlc.com:6443)'
         required: true
       ami:
         description: 'AWS ami to be used for machineSet. Default: Windows_Server-2019-English-Full-ContainersLatest-2021.04.14'
