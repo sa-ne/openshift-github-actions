@@ -2,22 +2,21 @@ name: deploy-openshift
 
 on:
   workflow_dispatch:
-    inputs:  
+    inputs:
       region:
         description: 'AWS Region to deploy cluster to'
         required: true
-        default: 'us-east-1'        
       s3_storage:
         description: 'S3 storage bucket name to save installation config files'
         required: true
-        default: 'ocp-s3-storage'  
+        default: 'ocp-s3-storage'
       ocpVersion:
         description: 'OpenShift version to be installed (stable, 4.7.17)'
-        required: true   
-        default: 'stable'         
+        required: true
+        default: 'stable'
       baseDomain:
         description: 'Base domain to deploy the cluster'
-        required: true       
+        required: true
       clusterNamePrefix:
         description: 'Cluster name prefix will get combined with the github run number'
         required: true
@@ -29,14 +28,14 @@ on:
       workersFlavor:
         description: 'Workers default size'
         required: true
-        default: 'm5.xlarge'    
+        default: 'm5.xlarge'
       networkType:
         description: 'Network type to deploy for cluster (OpenShiftSDN, OVNKubernetes)'
         required: true
         default: 'OpenShiftSDN'
 
 jobs:
-  deploy-ocp:
+  deploy-openshift:
     runs-on: macos-latest
     env:
       lcl_install_dir: ${{ github.event.inputs.clusterNamePrefix }}-${{ github.run_number }}
@@ -68,7 +67,6 @@ jobs:
         shell: bash
         run: |
           aws_ls_result=$(aws s3 ls "s3://${{ github.event.inputs.s3_storage }}" 2>&1) || true
-          echo "aws_ls_result is: $aws_ls_result"
 
           if [[ $aws_ls_result = *NoSuchBucket* ]]
           then
@@ -85,131 +83,131 @@ jobs:
             echo " *** ${{ github.event.inputs.s3_storage }} BUCKET ALREADY EXISTS *** "
           fi
 
-      # - name: Create SSH key for cluster
-      #   shell: bash
-      #   run: |
-      #     echo "\n *** VARS USED IN THIS STEP *** "
-      #     echo "lcl_install_dir is: ${{ env.lcl_install_dir }}"
-      #     echo " ********************************* \n"
-      #     mkdir -p ./${{ env.lcl_install_dir }}/ssh-keys/
-      #     ssh-keygen -t rsa -b 4096 -q -N "" -f "./${{ env.lcl_install_dir }}/ssh-keys/${{ env.lcl_install_dir }}"
-      #     aws s3 sync ./${{ env.lcl_install_dir }}/ssh-keys/ s3://${{ github.event.inputs.s3_storage }}/${{ env.lcl_install_dir }}/ssh-keys/
+      - name: Create SSH key for cluster
+        shell: bash
+        run: |
+          echo "\n *** VARS USED IN THIS STEP *** "
+          echo "lcl_install_dir is: ${{ env.lcl_install_dir }}"
+          echo " ********************************* \n"
+          mkdir -p ./${{ env.lcl_install_dir }}/ssh-keys/
+          ssh-keygen -t rsa -b 4096 -q -N "" -f "./${{ env.lcl_install_dir }}/ssh-keys/${{ env.lcl_install_dir }}"
+          aws s3 sync ./${{ env.lcl_install_dir }}/ssh-keys/ s3://${{ github.event.inputs.s3_storage }}/${{ env.lcl_install_dir }}/ssh-keys/
 
-      # - name: Parameterize install-config.yaml
-      #   shell: bash
-      #   env:
-      #     s3_config_path: "${{ github.event.inputs.s3_storage }}/ocp-install-configs"
-      #     clusterName: "${{ github.event.inputs.clusterNamePrefix }}-${{ github.run_number }}"
-      #   run: |
-      #     export pullSecret='${{ secrets.PULL_SECRET }}'
-      #     export sshKey=$(cat "./${{ env.lcl_install_dir }}/ssh-keys/${{ env.lcl_install_dir }}.pub")
-      #     export region=${{ github.event.inputs.region }}
-      #     export email=${{ secrets.EMAIL }}
-      #     export delete_by=NEVER
-      #     export always_up=false
-      #     export baseDomain=${{ github.event.inputs.baseDomain }}
-      #     export numMasters=${{ env.numMasters }}
-      #     export numWorkers=${{ github.event.inputs.numWorkers }}
-      #     export workersFlavor=${{ github.event.inputs.workersFlavor }}
-      #     export hostPrefix=${{ env.hostPrefix }}
-      #     export networkType=${{ github.event.inputs.networkType }}
-      #     export clusterName=${{ env.clusterName }}
-      #     export cidrClusterNetwork=${{ env.cidrClusterNetwork }}
-      #     export cidrMachineNetwork=${{ env.cidrMachineNetwork }}
-      #     export serviceNetwork=${{ env.serviceNetwork }}
-      #     envsubst < ./install-configs/install-config-template.yaml > ./${{ env.lcl_install_dir }}/install-config.yaml
-      #     aws s3 sync ./${{ env.lcl_install_dir }}/ s3://${{ github.event.inputs.s3_storage }}/${{ env.lcl_install_dir }}/
+      - name: Parameterize install-config.yaml
+        shell: bash
+        env:
+          s3_config_path: "${{ github.event.inputs.s3_storage }}/ocp-install-configs"
+          clusterName: "${{ github.event.inputs.clusterNamePrefix }}-${{ github.run_number }}"
+        run: |
+          export pullSecret='${{ secrets.PULL_SECRET }}'
+          export sshKey=$(cat "./${{ env.lcl_install_dir }}/ssh-keys/${{ env.lcl_install_dir }}.pub")
+          export region=${{ github.event.inputs.region }}
+          export email=${{ secrets.EMAIL }}
+          export delete_by=NEVER
+          export always_up=false
+          export baseDomain=${{ github.event.inputs.baseDomain }}
+          export numMasters=${{ env.numMasters }}
+          export numWorkers=${{ github.event.inputs.numWorkers }}
+          export workersFlavor=${{ github.event.inputs.workersFlavor }}
+          export hostPrefix=${{ env.hostPrefix }}
+          export networkType=${{ github.event.inputs.networkType }}
+          export clusterName=${{ env.clusterName }}
+          export cidrClusterNetwork=${{ env.cidrClusterNetwork }}
+          export cidrMachineNetwork=${{ env.cidrMachineNetwork }}
+          export serviceNetwork=${{ env.serviceNetwork }}
+          envsubst < ./install-configs/install-config-template.yaml > ./${{ env.lcl_install_dir }}/install-config.yaml
+          aws s3 sync ./${{ env.lcl_install_dir }}/ s3://${{ github.event.inputs.s3_storage }}/${{ env.lcl_install_dir }}/
 
-      # - name: Download OpenShift installer and update permissions
-      #   shell: bash
-      #   run: |
-      #     mkdir -p ./${{ env.lcl_install_dir }}
-      #     echo "Downloading OpenShift Installer..."
-      #     wget -q https://mirror.openshift.com/pub/openshift-v4/clients/ocp/${{ github.event.inputs.ocpVersion }}/openshift-install-mac.tar.gz
-      #     tar -xvzf openshift-install-mac.tar.gz
-      #     echo "Update permissions to executable on the openshift-installer..."
-      #     chmod +x ./openshift-install
-      #     echo "OCP_VERSION=$(./openshift-install version | head -n 1)" >> $GITHUB_ENV
+      - name: Download OpenShift installer and update permissions
+        shell: bash
+        run: |
+          mkdir -p ./${{ env.lcl_install_dir }}
+          echo "Downloading OpenShift Installer..."
+          wget -q https://mirror.openshift.com/pub/openshift-v4/clients/ocp/${{ github.event.inputs.ocpVersion }}/openshift-install-mac.tar.gz
+          tar -xvzf openshift-install-mac.tar.gz
+          echo "Update permissions to executable on the openshift-installer..."
+          chmod +x ./openshift-install
+          echo "OCP_VERSION=$(./openshift-install version | head -n 1)" >> $GITHUB_ENV
 
-      # - name: Create manifests
-      #   shell: bash
-      #   run: |
-      #     echo "Create OpenShift manifests...\n"
-      #     ./openshift-install --dir=./${{ env.lcl_install_dir }} create manifests
+      - name: Create manifests
+        shell: bash
+        run: |
+          echo "Create OpenShift manifests...\n"
+          ./openshift-install --dir=./${{ env.lcl_install_dir }} create manifests
 
-      # - name: Parameterize cluster-network-03-config file
-      #   if: github.event.inputs.networkType == 'OVNKubernetes'
-      #   shell: bash
-      #   env:
-      #     s3_config_path: "${{ github.event.inputs.s3_storage }}/ocp-install-configs"
-      #   run: |
-      #     export hostPrefix=${{ env.hostPrefix }}
-      #     export cidrClusterNetwork=${{ env.cidrClusterNetwork }}
-      #     export serviceNetwork=${{ env.serviceNetwork }}
-      #     export cidrhybridClusterNetwork=${{ env.cidrhybridClusterNetwork }}
-      #     envsubst < ./install-configs/cluster-network-03-config-template.yaml > ./${{ env.lcl_install_dir }}/manifests/cluster-network-03-config.yaml
-      #     aws s3 sync ./${{ env.lcl_install_dir }}/ s3://${{ github.event.inputs.s3_storage }}/${{ env.lcl_install_dir }}/
-      #     if [ ! -f ./${{ env.lcl_install_dir }}/manifests/cluster-network-03-config.yml ]; then echo "cluster-network-03-config.yaml does not exist." exit 1; else echo "cluster-network-03-config.yaml exists, continuing deployment..."; fi
+      - name: Parameterize cluster-network-03-config file
+        if: github.event.inputs.networkType == 'OVNKubernetes'
+        shell: bash
+        env:
+          s3_config_path: "${{ github.event.inputs.s3_storage }}/ocp-install-configs"
+        run: |
+          export hostPrefix=${{ env.hostPrefix }}
+          export cidrClusterNetwork=${{ env.cidrClusterNetwork }}
+          export serviceNetwork=${{ env.serviceNetwork }}
+          export cidrhybridClusterNetwork=${{ env.cidrhybridClusterNetwork }}
+          envsubst < ./install-configs/cluster-network-03-config-template.yaml > ./${{ env.lcl_install_dir }}/manifests/cluster-network-03-config.yaml
+          aws s3 sync ./${{ env.lcl_install_dir }}/ s3://${{ github.event.inputs.s3_storage }}/${{ env.lcl_install_dir }}/
+          if [ ! -f ./${{ env.lcl_install_dir }}/manifests/cluster-network-03-config.yml ]; then echo "cluster-network-03-config.yaml does not exist." exit 1; else echo "cluster-network-03-config.yaml exists, continuing deployment..."; fi
 
-      # - name: Create ignition configs
-      #   shell: bash
-      #   run: |
-      #     ./openshift-install create ignition-configs --dir=./${{ env.lcl_install_dir }}
+      - name: Create ignition configs
+        shell: bash
+        run: |
+          ./openshift-install create ignition-configs --dir=./${{ env.lcl_install_dir }}
 
-      # - name: Run OCP installer - create cluster
-      #   shell: bash
-      #   run: | 
-      #     echo "Starting Install of $OCP_VERSION"
-      #     echo "Deployment ETA ~40 minutes..."
-      #      ./openshift-install --dir=./${{ env.lcl_install_dir }} create cluster --log-level=warn
-      #     echo "Uploading install files to S3 for: ${{ env.lcl_install_dir }}"
-      #     aws s3 sync ./${{ env.lcl_install_dir }} s3://${{ github.event.inputs.s3_storage }}/${{ env.lcl_install_dir }}
+      - name: Run OCP installer - create cluster
+        shell: bash
+        run: | 
+          echo "Starting Install of $OCP_VERSION"
+          echo "Deployment ETA ~40 minutes..."
+           ./openshift-install --dir=./${{ env.lcl_install_dir }} create cluster --log-level=warn
+          echo "Uploading install files to S3 for: ${{ env.lcl_install_dir }}"
+          aws s3 sync ./${{ env.lcl_install_dir }} s3://${{ github.event.inputs.s3_storage }}/${{ env.lcl_install_dir }}
 
-      # - name: Remove kubeadmin user
-      #   shell: bash
-      #   run: |
-      #     export KUBECONFIG=$(pwd)/${{ env.lcl_install_dir }}/auth/kubeconfig
-      #     echo "KUBECONFIG env var is: $KUBECONFIG"
-      #     echo "Verify by running oc get nodes:"
-      #     oc get nodes
-      #     htpasswd -c -B -b ./users.htpasswd ${{ secrets.OC_USER }} ${{ secrets.OC_PASSWORD }}
-      #     oc create secret generic htpass-secret --from-file=htpasswd=./users.htpasswd -n openshift-config
-      #     oc apply -f ./crd/htpasswd-oauth.yml
-      #     oc create clusterrolebinding registry-controller --clusterrole=cluster-admin --user=${{ secrets.OC_USER }}
-      #     oc adm policy add-cluster-role-to-user cluster-admin ${{ secrets.OC_USER }}
-      #     oc delete secrets kubeadmin -n kube-system
+      - name: Remove kubeadmin user
+        shell: bash
+        run: |
+          export KUBECONFIG=$(pwd)/${{ env.lcl_install_dir }}/auth/kubeconfig
+          echo "KUBECONFIG env var is: $KUBECONFIG"
+          echo "Verify by running oc get nodes:"
+          oc get nodes
+          htpasswd -c -B -b ./users.htpasswd ${{ secrets.OC_USER }} ${{ secrets.OC_PASSWORD }}
+          oc create secret generic htpass-secret --from-file=htpasswd=./users.htpasswd -n openshift-config
+          oc apply -f ./crd/htpasswd-oauth.yml
+          oc create clusterrolebinding registry-controller --clusterrole=cluster-admin --user=${{ secrets.OC_USER }}
+          oc adm policy add-cluster-role-to-user cluster-admin ${{ secrets.OC_USER }}
+          oc delete secrets kubeadmin -n kube-system
 
-      # - name:  install certbot + aws-route53-extension
-      #   shell: bash
-      #   run: |
-      #     brew install certbot
-      #     pip3 install certbot-dns-route53
+      - name:  install certbot + aws-route53-extension
+        shell: bash
+        run: |
+          brew install certbot
+          pip3 install certbot-dns-route53
 
-      # - name: Run certbot against route53 to generate certs
-      #   shell: bash
-      #   env:
-      #     domain_for_cert: "*.apps.${{ github.event.inputs.clusterNamePrefix }}-${{ github.run_number }}.${{ github.event.inputs.baseDomain }}"
-      #   run: |
-      #     certbot certonly \
-      #       --dns-route53 \
-      #       --config-dir ./certbot-config \
-      #       --logs-dir ./certbot/logs \
-      #       --work-dir ./certbot/work \
-      #       --agree-tos \
-      #       --non-interactive \
-      #       --email ${{ secrets.EMAIL }} \
-      #       -d "${{ env.domain_for_cert }}"
+      - name: Run certbot against route53 to generate certs
+        shell: bash
+        env:
+          domain_for_cert: "*.apps.${{ github.event.inputs.clusterNamePrefix }}-${{ github.run_number }}.${{ github.event.inputs.baseDomain }}"
+        run: |
+          certbot certonly \
+            --dns-route53 \
+            --config-dir ./certbot-config \
+            --logs-dir ./certbot/logs \
+            --work-dir ./certbot/work \
+            --agree-tos \
+            --non-interactive \
+            --email ${{ secrets.EMAIL }} \
+            -d "${{ env.domain_for_cert }}"
 
-      # - name: Apply ssl cert against OpenShift
-      #   shell: bash
-      #   env:
-      #     cert_name: "apps.${{ github.event.inputs.clusterNamePrefix }}-${{ github.run_number }}.${{ github.event.inputs.baseDomain }}"
-      #     fullchain_path: "${{github.workspace}}/certbot-config/live/${{ env.cert_name }}/fullchain.pem"
-      #     privkey_path: "${{github.workspace}}/certbot-config/live/${{ env.cert_name }}/privkey.pem"
-      #   run: |
-      #     export KUBECONFIG=$(pwd)/${{ env.lcl_install_dir }}/auth/kubeconfig
-      #     oc login -u ${{ secrets.OC_USER }} -p ${{ secrets.OC_PASSWORD }}
-      #     fullchain="${{github.workspace}}/certbot-config/live/${{ env.cert_name }}/fullchain.pem"
-      #     privkey="${{github.workspace}}/certbot-config/live/${{ env.cert_name }}/privkey.pem"
-      #     oc create secret tls router-certs --cert=$fullchain --key=$privkey -n openshift-ingress
-      #     oc patch ingresscontroller default -n openshift-ingress-operator --type=merge --patch='{"spec": { "defaultCertificate": { "name": "router-certs" }}}'
+      - name: Apply ssl cert against OpenShift
+        shell: bash
+        env:
+          cert_name: "apps.${{ github.event.inputs.clusterNamePrefix }}-${{ github.run_number }}.${{ github.event.inputs.baseDomain }}"
+          fullchain_path: "${{github.workspace}}/certbot-config/live/${{ env.cert_name }}/fullchain.pem"
+          privkey_path: "${{github.workspace}}/certbot-config/live/${{ env.cert_name }}/privkey.pem"
+        run: |
+          export KUBECONFIG=$(pwd)/${{ env.lcl_install_dir }}/auth/kubeconfig
+          oc login -u ${{ secrets.OC_USER }} -p ${{ secrets.OC_PASSWORD }}
+          fullchain="${{github.workspace}}/certbot-config/live/${{ env.cert_name }}/fullchain.pem"
+          privkey="${{github.workspace}}/certbot-config/live/${{ env.cert_name }}/privkey.pem"
+          oc create secret tls router-certs --cert=$fullchain --key=$privkey -n openshift-ingress
+          oc patch ingresscontroller default -n openshift-ingress-operator --type=merge --patch='{"spec": { "defaultCertificate": { "name": "router-certs" }}}'
