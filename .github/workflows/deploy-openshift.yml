@@ -67,9 +67,8 @@ jobs:
       - name: Create S3 bucket
         shell: bash
         run: |
-          echo ${{ github.event.inputs.s3_storage }}
           aws_ls_result=$(aws s3 ls "s3://ocp-s3-storage" 2>&1) || true
-          echo $aws_ls_result
+          echo "aws_ls_result is: $aws_ls_result"
           if [[ $aws_ls_result = *NoSuchBucket* ]]
           then
             echo " *** BUCKET DOESN'T EXIST YET. CREATING S3 BUCKET *** "
