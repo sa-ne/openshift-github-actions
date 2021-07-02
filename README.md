@@ -145,5 +145,5 @@ This application consists of:
 
 ## Owners
 
-Giovanni Fontana (@giofontana)
-Dina Muscanell (@devopsdina)
+- Giovanni Fontana (@giofontana)
+- Dina Muscanell (@devopsdina)
