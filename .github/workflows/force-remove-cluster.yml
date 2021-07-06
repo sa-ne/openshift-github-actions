@@ -6,8 +6,8 @@ on:
       clusterName:
         description: 'Short name of cluster INCLUDING unquie id (i.e. ocp-test-01-a4j8a)'
         required: true
-      aws_region:
-        description: 'region in aws'
+      region:
+        description: 'AWS Region'
         required: true
       s3_storage:
         description: 'AWS S3 storage bucket name (i.e. ocp-s3-storage)'
@@ -29,7 +29,7 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ github.event.inputs.aws_region }}
+          aws-region: ${{ github.event.inputs.region }}
 
       - name: Download OpenShift installer and update permissions
         shell: bash
@@ -38,7 +38,7 @@ jobs:
         run: |
           mkdir -p ./${{ env.temp_dir }}
           echo "Downloading OpenShift Installer..."
-          aws s3 cp s3://${{ env.s3_installer_path }}/openshift-install ./openshift-install --region ${{ github.event.inputs.aws_region }} --quiet
+          aws s3 cp s3://${{ env.s3_installer_path }}/openshift-install ./openshift-install --region ${{ github.event.inputs.region }} --quiet
           echo "Update permissions to executable on the openshift-installer..."
           chmod +rwx ./openshift-install
 
@@ -48,7 +48,7 @@ jobs:
           mkdir -p ./${{ env.temp_dir }}
           mkdir -p ./${{ env.temp_dir }}/${{ github.event.inputs.clusterName }}
           export ID=${RANDOM:0:10000}
-          export aws_region="${{ github.event.inputs.aws_region }}"
+          export aws_region="${{ github.event.inputs.region }}"
           export clusterName="${{ github.event.inputs.clusterName }}"
           envsubst < ./destroy-configs/metadata.json > ./${{ env.temp_dir }}/${{ github.event.inputs.clusterName }}/metadata.json
 

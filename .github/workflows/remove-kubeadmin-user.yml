@@ -9,7 +9,7 @@ on:
       s3_storage:
         description: 'AWS S3 storage bucket name (i.e. ocp-s3-storage)'
         required: true
-      aws_region:
+      region:
         description: 'aws region'
         required: true
 
@@ -30,12 +30,12 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ github.event.inputs.aws_region }}
+          aws-region: "${{ github.event.inputs.region }}"
 
       - name: Use htpasswd as oauth, add OC_USER as cluster admin and removing kubeadmin user
         shell: bash
         run: |
-          aws s3 cp s3://${{ github.event.inputs.s3_storage }}/${{ github.event.inputs.subDomain }}/auth ./ --region ${{ github.event.inputs.aws_region }} --quiet
+          aws s3 cp s3://${{ github.event.inputs.s3_storage }}/${{ github.event.inputs.subDomain }}/auth ./ --region ${{ github.event.inputs.region }} --quiet
           export KUBECONFIG=./auth/kubeconfig
           oc login -u ${{ secrets.OCP_INIT_USER }} -p ${{ secrets.OC_INIT_PASSWORD }}
           htpasswd -c -B -b users.htpasswd ${{ secrets.OC_USER }} ${{ secrets.OC_PASSWORD }}

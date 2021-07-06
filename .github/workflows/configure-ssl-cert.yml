@@ -3,6 +3,9 @@ name: configure-ssl-cert-for-openshift-aws-route53
 on:
   workflow_dispatch:
     inputs:
+      region:
+        description: 'AWS Region'
+        required: true
       email:
         description: 'email to associate with certbot request'
         required: true
@@ -11,6 +14,9 @@ on:
         required: true
       s3_storage:
         description: 'AWS S3 storage bucket name (i.e. ocp-s3-storage)'
+        required: true
+      baseDomain:
+        description: 'Base domain to deploy the cluster (i.e. sandbox772.opentlc.com)'
         required: true
 
 jobs:
@@ -26,12 +32,10 @@ jobs:
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
-        env:
-          aws_region: us-east-1
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.aws_region }}
+          aws-region: "${{ github.event.inputs.region }}"
 
       - name: Install OpenShift CLI
         uses: redhat-actions/oc-installer@v1
@@ -45,7 +49,7 @@ jobs:
       - name: Run certbot against route53 to generate certs
         shell: bash
         env:
-          domain_for_cert: "*.apps.${{ github.event.inputs.subDomain }}.${{ secrets.baseDomain }}"
+          domain_for_cert: "*.apps.${{ github.event.inputs.subDomain }}.${{ github.event.inputs.baseDomain }}"
         run: |
           certbot certonly \
             --dns-route53 \
@@ -60,11 +64,11 @@ jobs:
       - name: Apply ssl cert against OpenShift
         shell: bash
         env:
-          cert_name: "apps.${{ github.event.inputs.subDomain }}.${{ secrets.baseDomain }}"
-          server_name: "https://api.${{ github.event.inputs.subDomain }}.${{ secrets.baseDomain }}:6443"
+          cert_name: "apps.${{ github.event.inputs.subDomain }}.${{ github.event.inputs.baseDomain }}"
+          server_name: "https://api.${{ github.event.inputs.subDomain }}.${{ github.event.inputs.baseDomain }}:6443"
         run: |
           mkdir -p ./${{ env.temp_dir }}
-          aws s3 sync s3://${{ github.event.inputs.s3_storage }}/${{ github.event.inputs.clusterConfigName }} ./${{ env.temp_dir }} --region us-east-1 
+          aws s3 sync s3://${{ github.event.inputs.s3_storage }}/${{ github.event.inputs.clusterConfigName }} ./${{ env.temp_dir }} --region "${{ github.event.inputs.region }}" 
           export KUBECONFIG=./${{ env.temp_dir }}/auth/kubeconfig
           oc login -u ${{ secrets.OC_USER }} -p ${{ secrets.OC_PASSWORD }}
           fullchain_path="${{github.workspace}}/certbot-config/live/${{ env.cert_name }}/fullchain.pem"

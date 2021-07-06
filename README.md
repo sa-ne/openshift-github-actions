@@ -1,127 +1,148 @@
-# ocp-ipi-aws-install
+# openshift-github-actions
 
-Example GitHub Actions workflows to:
+This code is meant to show working examples of deploying OpenShift and OpenShift components using GitHub Actions.
 
-- Deploy an OpenShift Cluster.
-- Configuring the final leg of the SSL certificate to remove the website warning, using certbot and route53.
-- Removing the kubeadmin user.
-- Removing the OpenShift Cluster from AWS, with the metadata files created during deployment.
-- Force removing the OpenShift Cluster from AWS, without any metadata files.
 
-S3 is used for file storage of the pull secret required for installation.
+**DISCLAIMER** 
+This code is meant to show a low barrier to entry for automation in regards to deploying OpenShift and OpenShift components in AWS.  Beware! Some jobs may not demonstrate best practices.
 
-S3 is used to store metadata for each run of the `deploy-openshift` workflow, assuming the installer completes successfully.
+### Table of Contents
+**[How to use](#how-to-use)**<br>
+**[Available Actions](#available-actions)**<br>
+**[Frequently-Asked-Questions](#frequently-asked-questions)**<br>
+**[Maintainers](#maintainers)**<br>
 
-**DISCLAIMER**
-This repo is not meant to demonstrate best practices or extensibility.  This repo is meant to show a low barrier to entry for automation in regards to deploying OpenShift in AWS.
+## How-to-use
 
-## Workflows
-### `deploy-openshift.yml`
+In order to use the workflows and actions, you must fork this repo first.  A fork is required because you will need to set secrets in order for the workflows to complete successfully.  Only owners/administrators can edit secrets on repositories.
 
-- The installer is run in multiple steps to allow for creation of the `install-config` file.
+---
+#### Set security for Actions after creating a fork
+By default, when forking a new repository, all actions are allowed.  To better protect yourself, change the Action Permissions to `Allow select actions` and whitelist the specified actions.  For this code, the following actions need to be whitelisted:
+```
+actions/*,
+aws-actions/*,
+redhat-actions/*,
+```
+![allow select actions](/assets/images/allow_select_actions.png)
 
-- SSH keys are generated during each run for the cluster.  All keys are sent to the S3 storage bucket.
+Additionally, you may want to update the `Workflow permissions` on the bottom of the Actions settings to `Read repository contents permission`
 
+![workflow permissions](/assets/images/workflow_permissions.png)
+
+---
+
+**WARNING**: By default, Actions logs are public. Anyone can view them.
+
+---
+#### Create required Repository Secrets
+Add the following secrets to the `Repository secrets`.  Once created, the secrets will not be shown again.
+
+`AWS_ACCESS_KEY_ID`: Specifies the AWS access key used as part of the credentials to authenticate the user.
+
+`AWS_SECRET_ACCESS_KEY`: Specifies the AWS secret key used as part of the credentials to authenticate the user.
+
+`PULL_SECRET`: From cloud.redhat.com/openshift/downloads, under Tokens.  The pull secret can be used for any version of OpenShift.  The pull secret will change if the credentials used to login to cloud.redhat.com are changed.
+
+`EMAIL`: E-mail to associate with OpenShift install-config.yaml and certbot.
+
+`OC_USER`: Depending on the workflow, `OC_USER` is either created or used as an existing user to login after the `kubeadmin` user is removed.
+
+`OC_PASSWORD`: Password associated with `OC_USER`.
+
+To set secrets, go to `Settings`, `Secrets`, ` New repository secret` (_note: not all secrets that should be set are shown in the screen grab_):
+
+![setting secrets](/assets/images/setting_secrets.png)
+
+#### Enable workflows
+
+To populate the Actions on your fork, they must be enabled.
+
+![enable workflows](/assets/images/enable_workflows_on_fork.png)
+
+---
+
+### Available-Actions
+
+**[deploy-openshift](#deploy-openshift)**<br>
+**[deploy-acm](#deploy-acm)**<br>
+**[configure-ssl-cert](#configure-ssl-cert)**<br>
+**[remove-kubeadmin-user](#remove-kubeadmin-user)**<br>
+**[remove-cluster](#remove-cluster)**<br>
+**[force-remove-cluster](#force-remove-cluster)**<br>
+**[prepull-windows-image](#prepull-windows-image)**<br>
+**[deploy-netcandystore](#deploy-netcandystore)**<br>
+
+---
+
+### deploy-openshift
+
+- Deploy a specified version of OpenShift to AWS, creating a "bare-bones" OpenShift instance.
+- All deployment metadata is stored in an S3 bucket created in the beginning of the workflow.
+- The kubeadmin user is removed and the `OC_USER` is created.
+- SSH keys are generated, keys are sent to the S3 storage bucket.
 - The OpenShift cluster certificate, by default will encrypt traffic.  However it is not signed by a CA so it will appear insecure in the browser.  If you check the cert on [SSL checker](https://www.sslshopper.com/ssl-checker.html), it will show secure until the very end of the chain by default.  This job will finish securing the certificate by using Let's Encrypt via the route53 plugin.
 
-#### Requirements for `deploy-openshift.yml`
+#### To support Windows containers
+For a cluster that supports Windows containers, update the `networkType` to `OVNKubernetes` when inputting parameters for the `deploy-openshift` Action.  _NOTE:_ No Windows machineSets are deployed with this workflow.
 
-An AWS account which has permission to create a S3 Storage bucket with will be used to store the files created during the installation. This github action will create this bucket automatically using the AWS Access Key set on the repository secrets.
+---
 
-**The following secrets are set:**
+### deploy-acm
 
-_Used to login to AWS:_
-- AWS_ACCESS_KEY_ID
-- AWS_SECRET_ACCESS_KEY
+- Deploys the ACM operator
+- Creates a pull-secret associated with ACM
 
-_Used for certificate configuration_
-- EMAIL
+---
 
-_Used for oc login to apply certs_:
-- OC_USER
-- OC_PASSWORD
-
-_Used for OpenShift deployment_:
-- PULL_SECRET
-
-### `configure-ssl-cert.yml`
+### configure-ssl-cert
 
 **This job still needs to be tested**
 
-Assuming the cluster is in AWS, using route 53 this job will use certbot + let's encrypt to act as a CA to sign the certificate.  The certificate that is provisioned with OpenShift, while it is encrypted, it will show "un-secure" on a browser until signed by a CA due to how the certificate chain works.
+Assuming the cluster is in AWS, using route 53 this job will use certbot + let's encrypt to act as a CA to sign the certificate.  
 
-#### Requirements for `configure-ssl-cert.yml`
+The certificate that is provisioned with OpenShift, while it is encrypted, it will show "un-secure" on a browser until signed by a CA due to how the certificate chain works.
 
-An AWS S3 Storage bucket with the following:
+---
 
-- S3 bucket with permissions set accordingly
-- The OpenShift metadata files
-
-The following secrets are used in this workflow:
-
-_Used to login to AWS:_
-- AWS_ACCESS_KEY_ID
-- AWS_SECRET_ACCESS_KEY
-
-_Used for certificate configuration_
-- EMAIL
-
-_Used for oc login to apply certs_:
-- OC_USER
-- OC_PASSWORD
-
-### `remove-kubeadmin-user`
-
-Removes the kubeadmin user, sets htpasswd as oauth and uses the OC_USER and OC_PASSWORD secrets to configure a new user.
+### remove-kubeadmin-user
 
 **This job still needs to be tested**
 
-The following secrets are used in this workflow:
-- AWS_ACCESS_KEY_ID
-- AWS_SECRET_ACCESS_KEY
-- BASEDOMAIN
-    - The base domain, usually your organizations or personal one.  Example: test.mycompany.com
-- OC_INIT_USER
-    - existing user (most likely kubeadmin)
-- OC_INIT_PASSWORD
-    - existing password
-- OC_USER
-    - New user to be configured
-- OC_PASSWORD
-    - Password for new user
+- Removes the kubeadmin user
+- Sets htpasswd as oauth
+- Uses the OC_USER and OC_PASSWORD secrets to configure a new user.
 
-### `remove-cluster`
+---
 
-This workflow will destroy the OpenShift cluster.  This workflow assumes you have the metadata files from the original deployment in an S3 bucket.
+### remove-cluster
 
-The following secrets are used in this workflow:
-_required to pull the OpenShift installer and corresponding metadata files_
-- AWS_ACCESS_KEY_ID
-- AWS_SECRET_ACCESS_KEY
+Destroy an OpenShift cluster using the metadata files from the deployment sourced from S3.
 
-### `force-remove-cluster`
+---
 
-This workflow will destroy the OpenShift cluster.  This workflow does not rely on any metadata from the original deployment.  It is a destroy hack!
+### force-remove-cluster
 
-The following secrets are used in this workflow:
-_required to pull the OpenShift installer_
-- AWS_ACCESS_KEY_ID
-- AWS_SECRET_ACCESS_KEY
+Destroy an OpenShift cluster without relying on any metadata from the original deployment.  It is a destroy hack!
 
-### `prepull-windows-image`
+---
 
-This workflow will prepull the Windows container image on the MachineSet.  Until the timeout is increased to 30 minutes for pulling an image, all Windows images need to be pull in advance of the actual container deployment
+### prepull-windows-image
 
-This workflow assumes you have the metadata from the install and the ssh key used to configure the WMCO in S3 storage.
+- Pre-pull the Windows container image on the MachineSet.
 
-The following secrets are used in this workflow:
-_required to pull the OpenShift metadata_
-- AWS_ACCESS_KEY_ID
-- AWS_SECRET_ACCESS_KEY
 
-### `deploy-netcandystore`
+Until the timeout is increased to 30 minutes for pulling an image, all Windows images need to be pulled in advance of the container deployment
 
-Deploy the [NetCandy Store](http://people.redhat.com/chernand/windows-containers-quickstart/ns-intro/) a mixed environment consisting of Windows Containers and Linux Container using helm.
+This workflow assumes you have the metadata from the install and the ssh key used to configure the WMCO in S3.
+
+---
+
+### deploy-netcandystore
+
+Deploy the [NetCandy Store](http://people.redhat.com/chernand/windows-containers-quickstart/ns-intro/) a mixed environment consisting of Windows Containers and Linux Containers using helm.
+
+_NOTE: The helm install supports Windows Server 2019 Datacenter 1809_
 
 This application consists of:
 
@@ -129,8 +150,30 @@ This application consists of:
 - Linux Container running a .NET Core backend service, which is using a database.
 - Linux Container running a MSSql database.
 
-The following secrets are used in this workflow:
-- AWS_ACCESS_KEY_ID
-- AWS_SECRET_ACCESS_KEY
-- OC_USER
-- OC_PASSWORD
+---
+
+## Frequently-Asked-Questions
+
+##### Can I use the Actions with RHPDS Open Environments?
+
+- Yes, absolutely!
+
+##### What is the difference between the `s3_storage` input and the `clusterConfigName`?
+
+- The `s3_storage` input refers to the bucket name 
+- The `clusterConfigName` refers to the object
+
+![s3 screen grab](/assets/images/s3_storage_example.png)
+
+##### Where can I find my pull-secret?
+
+Login to [cloud.redhat.com](cloud.redhat.com), select `OpenShift`, then `Downloads` and scroll to the bottom of the page where `Tokens` are listed.  Hit the `copy` button and then paste into your `PULL_SECRET` repository secret.
+
+![pull secret](/assets/images/pull_secret.png)
+
+---
+
+## Maintainers
+
+- Giovanni Fontana (@giofontana)
+- Dina Muscanell (@devopsdina)
