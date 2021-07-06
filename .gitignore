@@ -1,0 +1,6 @@
+.DS_STORE
+
+# Dont ignore .gitignore files & .github folders
+!.gitignore
+!/.gitignore
+!.github/

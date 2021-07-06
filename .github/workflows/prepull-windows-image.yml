@@ -35,19 +35,17 @@ jobs:
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
-        env:
-          aws_region: us-east-1
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.aws_region }}
+          aws-region: "${{ github.event.inputs.region }}"
 
       - name: Get cluster metadata files from S3
         shell: bash
         run: |
           mkdir -p ./${{ env.temp_dir }}
           echo "Downloading ${{ github.event.inputs.clusterConfigName }} metadata files from S3..."
-          aws s3 sync s3://${{ github.event.inputs.s3_storage }}/${{ github.event.inputs.clusterConfigName }} ./${{ env.temp_dir }} --region us-east-1 
+          aws s3 sync s3://${{ github.event.inputs.s3_storage }}/${{ github.event.inputs.clusterConfigName }} ./${{ env.temp_dir }} --region ${{ github.event.inputs.region }}
 
       - name: Pre-pull Windows container image job
         shell: bash
