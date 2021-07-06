@@ -1,3 +1,7 @@
+# This repo has been moved:
+
+[https://github.com/sa-ne/openshift-github-actions](https://github.com/sa-ne/openshift-github-actions)
+
 # ocp-ipi-aws-install
 
 Example GitHub Actions workflows to:
