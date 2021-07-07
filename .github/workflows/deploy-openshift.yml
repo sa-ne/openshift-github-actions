@@ -70,7 +70,7 @@ jobs:
 
           if [[ $aws_ls_result = *NoSuchBucket* ]]
           then
-            echo " *** ${{ github.event.inputs.s3_storage }} BUCKET DOESN'T EXIST YET. CREATING S3 BUCKET *** "
+            echo " *** ${{ github.event.inputs.s3_storage }} BUCKET DOESN'T EXIST YET. CREATING S3 BUCKET... *** "
             if [ "${{ github.event.inputs.region }}" = "us-east-1" ]; 
             then
               aws s3api create-bucket --bucket ${{ github.event.inputs.s3_storage }} --region ${{ github.event.inputs.region }} --acl private 
@@ -79,6 +79,9 @@ jobs:
             fi
             aws s3api put-public-access-block --bucket ${{ github.event.inputs.s3_storage }} --public-access-block-configuration "BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true"
             echo "S3 Bucket ${{ github.event.inputs.s3_storage }} created on region ${{ github.event.inputs.region }}"
+          elif [[ $aws_ls_result = *AccessDenied* ]]
+          then 
+            echo " *** GOT ACCESS DENIED ERROR! REVIEW THE BUCKET NAME, WHICH MUST BE UNIQUE AND NOT CONTAIN SPACES OR UPPERCASE LETTERS. *** "
           else
             echo " *** ${{ github.event.inputs.s3_storage }} BUCKET ALREADY EXISTS *** "
           fi
@@ -159,7 +162,7 @@ jobs:
         run: | 
           echo "Starting Install of $OCP_VERSION"
           echo "Deployment ETA ~40 minutes..."
-           ./openshift-install --dir=./${{ env.lcl_install_dir }} create cluster --log-level=warn
+           ./openshift-install --dir=./${{ env.lcl_install_dir }} create cluster --log-level=debug
           echo "Uploading install files to S3 for: ${{ env.lcl_install_dir }}"
           aws s3 sync ./${{ env.lcl_install_dir }} s3://${{ github.event.inputs.s3_storage }}/${{ env.lcl_install_dir }}
 
