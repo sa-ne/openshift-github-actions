@@ -58,7 +58,6 @@ jobs:
           export machineset_name=${infrastructure_id}-storage-${zone}
           envsubst < ./crd/odf/odf-machineset.yaml >> ./${{ env.lcl_install_dir }}/aws-machineset-odf.yaml
           oc apply -f ./${{ env.lcl_install_dir }}/aws-machineset-odf.yaml
-          aws s3 sync ./${{ env.lcl_install_dir }}/ s3://${{ github.event.inputs.s3_storage }}/${{ env.lcl_install_dir }}/
           echo "Waiting for ODF MachineSet to become Available..."
           until oc get machineset ${machineset_name} -n openshift-machine-api -o json | jq -e '(.status.availableReplicas == 3)' | grep -m 1 'true'; do sleep 2; done
 
