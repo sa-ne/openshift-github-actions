@@ -14,6 +14,7 @@ on:
       odfSize:
         description: 'OpenShift Data Foundation DeviceSet Size (i.e: 512Gi)'    
         required: true              
+        default: 512Gi
 
 jobs:
   deploy-odf:
