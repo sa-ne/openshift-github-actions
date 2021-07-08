@@ -7,11 +7,11 @@ on:
         description: 'OpenShift API endpoint (i.e. https://api.ocp-15.sandbox1900.opentlc.com:6443)'    
         required: true
 
-      odf_version:
+      odfVersion:
         description: 'OpenShift Data Foundation Version (i.e: 4.6)'    
         required: true        
 
-      odf_size:
+      odfSize:
         description: 'OpenShift Data Foundation DeviceSet Size (i.e: 512Gi)'    
         required: true              
 
@@ -42,7 +42,7 @@ jobs:
         shell: bash
         run: |
 
-          export odf_version=${{ github.event.inputs.odf_version }}
+          export odf_version=${{ github.event.inputs.odfVersion }}
           envsubst < ./crd/odf/odf-sub.yaml >> ./crd/odf/odf-sub-version.yaml
 
           oc apply -f ./crd/odf/odf-namespace.yaml
@@ -70,7 +70,7 @@ jobs:
       - name: Deploy ODF StorageCluster
         shell: bash
         run: |
-          export odf_size=${{ github.event.inputs.odf_size }}
+          export odf_size=${{ github.event.inputs.odfSize }}
           envsubst < ./crd/odf/odf-storagecluster.yaml >> ./crd/odf/odf-storagecluster-final.yaml        
           oc apply -f ./crd/odf/odf-storagecluster-final.yaml
           sleep 120 # WAITING 2 MINUTES FOR ODF DEPLOYMENT
