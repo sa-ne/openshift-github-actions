@@ -1,0 +1,97 @@
+name: deploy-acm
+
+on:
+  workflow_dispatch:
+    inputs:
+      ocpAPI:
+        description: 'OpenShift API endpoint (i.e. https://api.ocp-15.sandbox1900.opentlc.com:6443)'    
+        required: true
+
+      odf_version:
+        description: 'OpenShift Data Foundation Version (i.e: 4.6)'    
+        required: true        
+
+      odf_size:
+        description: 'OpenShift Data Foundation DeviceSet Size (i.e: 512Gi)'    
+        required: true              
+
+jobs:
+  deploy-acm:
+    runs-on: macos-latest
+    env:
+      lcl_install_dir: odf-deployment-${{ github.run_number }}
+
+    steps:
+      - name: "Checkout ${{ github.ref }}"
+        uses: actions/checkout@master
+        with:
+          ref: ${{ github.ref }}
+
+      - name: Install OpenShift CLI
+        uses: redhat-actions/oc-installer@v1
+
+      - name: Authenticate with OpenShift
+        uses: redhat-actions/oc-login@v1
+        with:
+          openshift_server_url: ${{ github.event.inputs.ocpAPI }}
+          openshift_username: ${{ secrets.OC_USER }}
+          openshift_password: ${{ secrets.OC_PASSWORD }}
+          insecure_skip_tls_verify: true
+
+      - name: Install ODF Operator
+        shell: bash
+        run: |
+
+          export odf_version=${{ github.event.inputs.odf_version }}
+          envsubst < ./crd/odf/odf-sub.yaml >> ./crd/odf/odf-sub-version.yaml
+
+          oc apply -f ./crd/odf/odf-namespace.yaml
+          oc apply -f ./crd/odf/odf-og.yaml
+          oc apply -f ./crd/odf/odf-sub-version.yaml
+
+          sleep 60
+          oc project openshift-storage
+          TIMEOUT=0 
+          subs_status=$(oc get csv -n openshift-storage -o jsonpath='{.items[0].status.phase}')
+          while [ "$subs_status" != "Succeeded" ]; do
+            echo "Operator still being deployed. Waiting one more minute..."
+            sleep 60
+
+            if [ $TIMEOUT -gt 15 ]; then #15 MINUTES TIMEOUT
+              echo "Timeout reached... Check the status of the operator deployment on OpenShift."
+              exit 1
+            fi
+            TIMEOUT=$(($TIMEOUT+1))
+            subs_status=$(oc get csv -n openshift-storage -o jsonpath='{.items[0].status.phase}')
+          done
+          
+          echo "Operator Deployment Finished"
+
+      - name: Deploy ODF StorageCluster
+        shell: bash
+        run: |
+          export odf_size=${{ github.event.inputs.odf_size }}
+          envsubst < ./crd/odf/odf-storagecluster.yaml >> ./crd/odf/odf-storagecluster-final.yaml        
+          oc apply -f ./crd/odf/odf-storagecluster-final.yaml
+          sleep 120 # WAITING 2 MINUTES FOR ODF DEPLOYMENT
+
+      - name: Verify ODF status
+        shell: bash
+        run: |
+          TIMEOUT=0 
+
+          status=$(oc get StorageCluster ocs-storagecluster -n openshift-storage -o jsonpath='{.status.phase}')
+          while [ "$status" != "Running" ]; do
+            echo "MultiClusterHub still being deployed. Waiting one more minute..."
+            sleep 60
+
+            if [ $TIMEOUT -gt 15 ]; then #15 MINUTES TIMEOUT
+              echo "Timeout reached... Check the status of ACM deployment on OpenShift."
+              exit 1
+            fi
+            TIMEOUT=$(($TIMEOUT+1))
+            status=$(oc get StorageCluster ocs-storagecluster -n openshift-storage -o jsonpath='{.status.phase}')
+          done
+          
+          echo "Deployment Finished"
+
