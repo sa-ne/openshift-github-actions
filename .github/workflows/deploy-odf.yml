@@ -16,6 +16,11 @@ on:
         required: true              
         default: 512Gi
 
+      odfNodeFlavor:
+        description: 'Flavor that will be used for ODF Machines'
+        required: true
+        default: "c5.4xlarge"    
+
 jobs:
   deploy-odf:
     runs-on: macos-latest
@@ -39,16 +44,38 @@ jobs:
           openshift_password: ${{ secrets.OC_PASSWORD }}
           insecure_skip_tls_verify: true
 
+      - name: Deploy MachineSet for ODF
+        shell: bash
+        run: |
+          export infrastructure_id=$(oc get -o jsonpath='{.status.infrastructureName}{"\n"}' infrastructure cluster)
+          export region=$(oc get -o jsonpath='{.status.platformStatus.aws.region}{"\n"}' infrastructure cluster)
+          export zone=${region}a
+          export flavor=${{ github.event.inputs.odfNodeFlavor }}
+          export email=${{ secrets.EMAIL }}
+          export ami=$(oc get machineset -n openshift-machine-api -o jsonpath='{.items[0].spec.template.spec.providerSpec.value.ami.id}')
+          export delete_by=NEVER
+          export always_up=false
+          export machineset_name=${infrastructure_id}-storage-${zone}
+          envsubst < ./crd/odf/odf-machineset.yaml >> ./${{ env.lcl_install_dir }}/aws-machineset-odf.yaml
+          oc apply -f ./${{ env.lcl_install_dir }}/aws-machineset-odf.yaml
+          aws s3 sync ./${{ env.lcl_install_dir }}/ s3://${{ github.event.inputs.s3_storage }}/${{ env.lcl_install_dir }}/
+          echo "Waiting for ODF MachineSet to become Available..."
+          until oc get machineset ${machineset_name} -n openshift-machine-api -o json | jq -e '(.status.availableReplicas == 3)' | grep -m 1 'true'; do sleep 2; done
+
+
       - name: Install ODF Operator
         shell: bash
         run: |
 
           export odf_version=${{ github.event.inputs.odfVersion }}
-          envsubst < ./crd/odf/odf-sub.yaml >> ./crd/odf/odf-sub-version.yaml
+          envsubst < ./crd/odf/odf-namespace.yaml >> ./${{ env.lcl_install_dir }}/odf-namespace.yaml          
+          envsubst < ./crd/odf/odf-sub.yaml >> ./${{ env.lcl_install_dir }}/odf-sub.yaml
+          envsubst < ./crd/odf/odf-og.yaml >> ./${{ env.lcl_install_dir }}/odf-og.yaml
 
-          oc apply -f ./crd/odf/odf-namespace.yaml
-          oc apply -f ./crd/odf/odf-og.yaml
-          oc apply -f ./crd/odf/odf-sub-version.yaml
+
+          oc apply -f ./${{ env.lcl_install_dir }}/odf-namespace.yaml
+          oc apply -f ./${{ env.lcl_install_dir }}/odf-sub.yaml
+          oc apply -f ./${{ env.lcl_install_dir }}/odf-og.yaml
 
           sleep 60
           oc project openshift-storage
@@ -72,8 +99,8 @@ jobs:
         shell: bash
         run: |
           export odf_size=${{ github.event.inputs.odfSize }}
-          envsubst < ./crd/odf/odf-storagecluster.yaml >> ./crd/odf/odf-storagecluster-final.yaml        
-          oc apply -f ./crd/odf/odf-storagecluster-final.yaml
+          envsubst < ./crd/odf/odf-storagecluster.yaml >> ./${{ env.lcl_install_dir }}/odf-storagecluster.yaml        
+          oc apply -f ./${{ env.lcl_install_dir }}/odf-storagecluster.yaml 
           sleep 120 # WAITING 2 MINUTES FOR ODF DEPLOYMENT
 
       - name: Verify ODF status
