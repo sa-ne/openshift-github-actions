@@ -1,4 +1,4 @@
-name: deploy-acm
+name: deploy-odf
 
 on:
   workflow_dispatch:
@@ -16,7 +16,7 @@ on:
         required: true              
 
 jobs:
-  deploy-acm:
+  deploy-odf:
     runs-on: macos-latest
     env:
       lcl_install_dir: odf-deployment-${{ github.run_number }}
@@ -86,7 +86,7 @@ jobs:
             sleep 60
 
             if [ $TIMEOUT -gt 15 ]; then #15 MINUTES TIMEOUT
-              echo "Timeout reached... Check the status of ACM deployment on OpenShift."
+              echo "Timeout reached... Check the status of the deployment on OpenShift."
               exit 1
             fi
             TIMEOUT=$(($TIMEOUT+1))
