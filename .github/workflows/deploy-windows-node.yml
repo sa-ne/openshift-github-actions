@@ -13,9 +13,9 @@ on:
         description: 'OpenShift API endpoint (eg. https://api.ocp-15.sandbox1900.opentlc.com:6443)'
         required: true
       ami:
-        description: 'AWS ami to be used for machineSet. Default: Windows_Server-2019-English-Full-ContainersLatest-2021.04.14'
+        description: 'AWS ami to be used for machineSet. Default: Windows_Server-2019-English-Full-ContainersLatest-2021.06.09'
         required: true
-        default: 'ami-015451c8bbe8e7650'
+        default: 'ami-0a23033ab25d47f2c'
       containerImage:
         description: 'Container Image to pull from registry'
         required: true
@@ -51,13 +51,6 @@ jobs:
           openshift_password: ${{ secrets.OC_PASSWORD }}
           insecure_skip_tls_verify: true
 
-      - name: Create SSH key for WMCO
-        shell: bash
-        run: |
-          mkdir -p ./${{ env.lcl_install_dir }}/ssh-keys/
-          ssh-keygen -t rsa -b 4096 -m PEM -q -N "" -f "./${{ env.lcl_install_dir }}/ssh-keys/${{ env.lcl_install_dir }}-wmco"
-          aws s3 sync ./${{ env.lcl_install_dir }}/ssh-keys/ s3://${{ github.event.inputs.s3_storage }}/${{ env.lcl_install_dir }}/ssh-keys/
-
       - name: Install WMCO
         shell: bash
         run: |
@@ -74,6 +67,9 @@ jobs:
             echo "Secret cloud-private-key already exists"
           else
             echo "Creating secret cloud-private-key"
+            mkdir -p ./${{ env.lcl_install_dir }}/ssh-keys/
+            ssh-keygen -t rsa -b 4096 -m PEM -q -N "" -f "./${{ env.lcl_install_dir }}/ssh-keys/${{ env.lcl_install_dir }}-wmco"
+            aws s3 sync ./${{ env.lcl_install_dir }}/ssh-keys/ s3://${{ github.event.inputs.s3_storage }}/${{ env.lcl_install_dir }}/ssh-keys/
             oc create secret generic cloud-private-key --from-file=private-key.pem=./${{ env.lcl_install_dir }}/ssh-keys/${{ env.lcl_install_dir }}-wmco -n openshift-windows-machine-config-operator
           fi
 
