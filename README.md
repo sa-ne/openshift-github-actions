@@ -117,9 +117,11 @@ _NOTE:_ No Windows machineSets are deployed with this workflow.
 
 ### deploy-bastion-host
 
-The OpenShift Container Platform installer does not create any public IP addresses for any of the Amazon Elastic Compute Cloud (Amazon EC2) instances that it provisions for your OpenShift Container Platform cluster. To be able to SSH to your OpenShift Container Platform hosts, you must follow provision a Bastion (jump box) host.
+The OpenShift Container Platform installer does not create any public IP addresses for any of the Amazon Elastic Compute Cloud (Amazon EC2) instances that it provisions for your OpenShift Container Platform cluster. To be able to SSH to your OpenShift Container Platform hosts, you must provision a Bastion (jump box) host.
 
-This workflow will provision a Bastion host in AWS with a public IP.  The workflow assumes you have used the `deploy-openshift` workflow to provision the cluster.  Copying down the S3 bucket and using the key located in the `/ssh-keys/` folder for the key pair.  This key is used to SSH into the Bastion host.
+This workflow will provision a Bastion host in AWS with a public IP.  The workflow assumes you have used the `deploy-openshift` workflow to provision the cluster.  It will copy down the S3 bucket and use the key located in the `/ssh-keys/` folder for the key pair.
+
+To SSH into the Bastion host, use the key from the `/ssh-keys/` folder for the cluster.
 
 ---
 ### configure-ssl-cert
