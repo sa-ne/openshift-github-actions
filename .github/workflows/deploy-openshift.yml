@@ -162,7 +162,7 @@ jobs:
         run: | 
           echo "Starting Install of $OCP_VERSION"
           echo "Deployment ETA ~40 minutes..."
-           ./openshift-install --dir=./${{ env.lcl_install_dir }} create cluster --log-level=debug
+           ./openshift-install --dir=./${{ env.lcl_install_dir }} create cluster --log-level=warn
           echo "Uploading install files to S3 for: ${{ env.lcl_install_dir }}"
           aws s3 sync ./${{ env.lcl_install_dir }} s3://${{ github.event.inputs.s3_storage }}/${{ env.lcl_install_dir }}
 
