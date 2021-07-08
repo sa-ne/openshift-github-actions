@@ -109,8 +109,8 @@ jobs:
           TIMEOUT=0 
 
           status=$(oc get StorageCluster ocs-storagecluster -n openshift-storage -o jsonpath='{.status.phase}')
-          while [ "$status" != "Running" ]; do
-            echo "MultiClusterHub still being deployed. Waiting one more minute..."
+          while [ "$status" != "Ready" ]; do
+            echo "Deployment in progress. Waiting one more minute..."
             sleep 60
 
             if [ $TIMEOUT -gt 15 ]; then #15 MINUTES TIMEOUT
