@@ -171,6 +171,37 @@ Login to [cloud.redhat.com](cloud.redhat.com), select `OpenShift`, then `Downloa
 
 ![pull secret](/assets/images/pull_secret.png)
 
+##### How do I login to my OpenShift instance locally after using the `deploy-openshift` action?
+
+- Ensure the AWS CLI and OC CLI are installed locally.
+- Remember, metadata from the deployment is stored in AWS assuming you used the `openshift-deploy` action to provision the cluster.  
+- Pull down the data from S3 (you may need to first authenticate with your aws credentials by running `aws configure`).
+    - `aws s3 sync s3://ocp-s3-storage/ocp-<insert-run-id>/ ./ocp-<insert-run-id>`
+- Export the kube config:
+    - `export KUBECONFIG=./ocp-<insert-run-id>/auth/kubeconfig`
+    - `oc login -u <USERNAME> -p '<PASSWORD>'`
+
+Alternatively, you can also obtain a token to login by visiting: `https://oauth-openshift.apps.ocp-<insert-run-id>.<base domain>/oauth/token/request` or
+via the console (`https://console-openshift-console.apps.ocp-<insert-run-id>.<base domain>/`)
+
+Via the console, after authentication, click on the user in the upper right and hit `copy login command`, this will push you to the api login, where you will need to authenticate again.
+
+![oc login command](/assets/images/oc_login_command.png)
+
+After logging in, you can copy and paste the `oc login command`
+
+![tokens](/assets/images/tokens.png)
+
+
+##### The `openshift-deploy` action is failing with AddressLimitExceeded
+
+If you are using an RHPDS Open Environment Elastic IPs are limited to 5.  You may run into this error if you're deploying more than two clusters.
+
+![elastic IPs exceeded](/assets/images/elastic_IPs_exceeded.png)
+
+##### Invalid AMI
+Every few months AWS updates AMI's, you may get an error if AWS removes an older AMI.   While we do our best to ensure the default AMI's are available, you may hit this issue before we do.  Please open a pull request or issue if you run into this!
+
 ---
 
 ## Maintainers
