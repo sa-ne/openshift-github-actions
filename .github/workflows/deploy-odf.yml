@@ -47,6 +47,7 @@ jobs:
       - name: Deploy MachineSet for ODF
         shell: bash
         run: |
+          mkdir -p ./${{ env.lcl_install_dir }}
           export infrastructure_id=$(oc get -o jsonpath='{.status.infrastructureName}{"\n"}' infrastructure cluster)
           export region=$(oc get -o jsonpath='{.status.platformStatus.aws.region}{"\n"}' infrastructure cluster)
           export zone=${region}a
