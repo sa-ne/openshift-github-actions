@@ -160,7 +160,7 @@ This application consists of:
 
 ##### What is the difference between the `s3_storage` input and the `clusterConfigName`?
 
-- The `s3_storage` input refers to the bucket name 
+- The `s3_storage` input refers to the bucket name, this **MUST be unique to the region where the storage bucket is created**.
 - The `clusterConfigName` refers to the object
 
 ![s3 screen grab](/assets/images/s3_storage_example.png)
@@ -176,7 +176,7 @@ Login to [cloud.redhat.com](cloud.redhat.com), select `OpenShift`, then `Downloa
 - Ensure the AWS CLI and OC CLI are installed locally.
 - Remember, metadata from the deployment is stored in AWS assuming you used the `openshift-deploy` action to provision the cluster.  
 - Pull down the data from S3 (you may need to first authenticate with your aws credentials by running `aws configure`).
-    - `aws s3 sync s3://ocp-s3-storage/ocp-<insert-run-id>/ ./ocp-<insert-run-id>`
+    - `aws s3 sync s3://<your-s3-storage-name)/ocp-<insert-run-id>/ ./ocp-<insert-run-id>`
 - Export the kube config:
     - `export KUBECONFIG=./ocp-<insert-run-id>/auth/kubeconfig`
     - `oc login -u <USERNAME> -p '<PASSWORD>'`
