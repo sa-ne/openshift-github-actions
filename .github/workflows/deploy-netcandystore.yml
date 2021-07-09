@@ -7,7 +7,7 @@ on:
         description: 'AWS Region'
         required: true
       s3_storage:
-        description: 'AWS S3 storage bucket name (i.e. ocp-s3-storage)'
+        description: 'AWS S3 storage bucket name'
         required: true
       clusterConfigName:
         description: 'Folder name of cluster config in S3 to pull down for auth.  Example: ocp-[run_number]'

@@ -9,7 +9,6 @@ on:
       s3_storage:
         description: 'S3 storage bucket name to save installation config files'
         required: true
-        default: 'ocp-s3-storage'
       ocpVersion:
         description: 'OpenShift version to be installed (stable, 4.7.17)'
         required: true

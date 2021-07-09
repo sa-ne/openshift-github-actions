@@ -7,7 +7,7 @@ on:
         description: 'AWS Region to deploy cluster to'
         required: true
       s3_storage:
-        description: 'AWS S3 storage bucket name (i.e. ocp-s3-storage)'
+        description: 'AWS S3 storage bucket name'
         required: true
       ocpAPI:
         description: 'OpenShift API endpoint (eg. https://api.ocp-15.sandbox1900.opentlc.com:6443)'
