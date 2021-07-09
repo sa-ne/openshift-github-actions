@@ -222,6 +222,10 @@ Login to [cloud.redhat.com](cloud.redhat.com), select `OpenShift`, then `Downloa
 
 ##### How do I login to my OpenShift instance locally after using the `deploy-openshift` action?
 
+- The console URL will be output in Apply ssl cert against OpenShift step.
+
+![console ur](/assets/images/console_url.png)
+
 - Ensure the AWS CLI and OC CLI are installed locally.
 - Remember, metadata from the deployment is stored in AWS assuming you used the `openshift-deploy` action to provision the cluster.  
 - Pull down the data from S3 (you may need to first authenticate with your aws credentials by running `aws configure`).

@@ -20,6 +20,7 @@ on:
 jobs:
   remove-openshift-cluster:
     runs-on: macos-latest
+
     env:
       temp_dir: "temp-${{ github.run_number }}"
     steps:

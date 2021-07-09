@@ -21,8 +21,7 @@ jobs:
   force-remove-cluster:
     runs-on: macos-latest
     env:
-      ocpVersion: 'stable'
-      temp_dir: "temp-${{ github.run_number }}"      
+      temp_dir: "temp-${{ github.run_number }}"
     steps:
       - name: "Checkout ${{ github.ref }}"
         uses: actions/checkout@master
@@ -40,7 +39,7 @@ jobs:
         shell: bash
         run: |
           echo "Downloading OpenShift Installer..."
-          wget -q https://mirror.openshift.com/pub/openshift-v4/clients/ocp/${{ env.ocpVersion }}/openshift-install-mac.tar.gz
+          wget -q https://mirror.openshift.com/pub/openshift-v4/clients/ocp/${{ github.event.inputs.ocpVersion }}/openshift-install-mac.tar.gz
           tar -xvzf openshift-install-mac.tar.gz
           echo "Update permissions to executable on the openshift-installer..."
           chmod +x ./openshift-install
