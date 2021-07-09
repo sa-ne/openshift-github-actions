@@ -64,13 +64,25 @@ To populate the Actions on your fork, they must be enabled.
 
 ### Available-Actions
 
+**Deployment Actions**
+
 **[deploy-openshift](#deploy-openshift)**<br>
 **[deploy-acm](#deploy-acm)**<br>
+**[deploy-odf](#deploy-odf)**<br>
 **[deploy-bastion-host](#deploy-bastion-host)**<br>
+
+**Configuration Actions**
+
 **[configure-ssl-cert](#configure-ssl-cert)**<br>
 **[remove-kubeadmin-user](#remove-kubeadmin-user)**<br>
+
+**Deprovision Actions**
+
 **[remove-cluster](#remove-cluster)**<br>
 **[force-remove-cluster](#force-remove-cluster)**<br>
+
+**Application Actions**
+
 **[prepull-windows-image](#prepull-windows-image)**<br>
 **[deploy-netcandystore](#deploy-netcandystore)**<br>
 
@@ -111,9 +123,17 @@ _NOTE:_ No Windows machineSets are deployed with this workflow.
 
 - Deploys the ACM operator
 - Creates a pull-secret associated with ACM
+- Deploy a MultiClusterHub instance to install ACM
 
 ---
 
+### deploy-odf
+
+- Deploys a new MachineSet to provision 3 new servers for ODF
+- Deploys the OpenShift Data Foundation (aka OCS) operator
+- Deploys a StorageCluster instance to install ODF
+
+---
 
 ### deploy-bastion-host
 
