@@ -64,12 +64,25 @@ To populate the Actions on your fork, they must be enabled.
 
 ### Available-Actions
 
+**Deployment Actions**
+
 **[deploy-openshift](#deploy-openshift)**<br>
 **[deploy-acm](#deploy-acm)**<br>
+**[deploy-odf](#deploy-odf)**<br>
+**[deploy-bastion-host](#deploy-bastion-host)**<br>
+
+**Configuration Actions**
+
 **[configure-ssl-cert](#configure-ssl-cert)**<br>
 **[remove-kubeadmin-user](#remove-kubeadmin-user)**<br>
+
+**Deprovision Actions**
+
 **[remove-cluster](#remove-cluster)**<br>
 **[force-remove-cluster](#force-remove-cluster)**<br>
+
+**Application Actions**
+
 **[prepull-windows-image](#prepull-windows-image)**<br>
 **[deploy-netcandystore](#deploy-netcandystore)**<br>
 
@@ -83,8 +96,26 @@ To populate the Actions on your fork, they must be enabled.
 - SSH keys are generated, keys are sent to the S3 storage bucket.
 - The OpenShift cluster certificate, by default will encrypt traffic.  However it is not signed by a CA so it will appear insecure in the browser.  If you check the cert on [SSL checker](https://www.sslshopper.com/ssl-checker.html), it will show secure until the very end of the chain by default.  This job will finish securing the certificate by using Let's Encrypt via the route53 plugin.
 
+#### For use with RHPDS Open Environments
+
+Please see the e-mail you received to set the following:
+
+Inputs:
+`region`
+`Base domain to deploy the cluster (i.e. sandbox772.opentlc.com)`
+
+Secrets:
+`AWS_ACCESS_KEY_ID`
+`AWS_SECRET_ACCESS_KEY`
+
+![RHPDS Open Environment Email](/assets/images/RHPDS_Email.png)
+
+
+
 #### To support Windows containers
-For a cluster that supports Windows containers, update the `networkType` to `OVNKubernetes` when inputting parameters for the `deploy-openshift` Action.  _NOTE:_ No Windows machineSets are deployed with this workflow.
+For a cluster that supports Windows containers, update the `networkType` to `OVNKubernetes` when inputting parameters for the `deploy-openshift` Action.  
+
+_NOTE:_ No Windows machineSets are deployed with this workflow.
 
 ---
 
@@ -92,9 +123,27 @@ For a cluster that supports Windows containers, update the `networkType` to `OVN
 
 - Deploys the ACM operator
 - Creates a pull-secret associated with ACM
+- Deploy a MultiClusterHub instance to install ACM
 
 ---
 
+### deploy-odf
+
+- Deploys a new MachineSet to provision 3 new servers for ODF
+- Deploys the OpenShift Data Foundation (aka OCS) operator
+- Deploys a StorageCluster instance to install ODF
+
+---
+
+### deploy-bastion-host
+
+The OpenShift Container Platform installer does not create any public IP addresses for any of the Amazon Elastic Compute Cloud (Amazon EC2) instances that it provisions for your OpenShift Container Platform cluster. To be able to SSH to your OpenShift Container Platform hosts, you must provision a Bastion (jump box) host.
+
+This workflow will provision a Bastion host in AWS with a public IP.  The workflow assumes you have used the `deploy-openshift` workflow to provision the cluster.  It will copy down the S3 bucket and use the key located in the `/ssh-keys/` folder for the key pair.
+
+To SSH into the Bastion host, use the key from the `/ssh-keys/` folder for the cluster.
+
+---
 ### configure-ssl-cert
 
 **This job still needs to be tested**

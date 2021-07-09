@@ -1,0 +1,79 @@
+name: deploy-bastion-host
+
+on:
+  workflow_dispatch:
+    inputs:
+      region:
+        description: 'region in AWS'
+        required: true
+      s3_storage:
+        description: 'AWS S3 storage bucket name (i.e. unique-storage-bucket)'
+        required: true
+      clusterConfigName:
+        description: 'Folder name of cluster config in S3 to pull down for auth.  Example: ocp-[run_number]'
+        required: true
+      ami:
+        description: 'AWS ami to be used for Bastion Host. Default: amazon/amzn2-ami-hvm-2.0.20210617.0-x86_64-gp2'
+        required: true
+        default: 'ami-0277b52859bac6f4b'
+      instance_type:
+        description: 'EC2 instance size'
+        required: true
+        default: 't2.micro'
+
+jobs:
+  deploy-bastion-host:
+    runs-on: macos-latest
+    env:
+      temp_dir: "temp-${{ github.run_number }}"
+
+    steps:
+      - name: "Checkout ${{ github.ref }}"
+        uses: actions/checkout@master
+        with:
+          ref: ${{ github.ref }}
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: "${{ github.event.inputs.region }}"
+
+      - name: Get cluster metadata files from S3
+        shell: bash
+        run: |
+          mkdir -p ./${{ env.temp_dir }}
+          echo "Downloading ${{ github.event.inputs.clusterConfigName }} metadata files from S3..."
+          aws s3 sync s3://${{ github.event.inputs.s3_storage }}/${{ github.event.inputs.clusterConfigName }} ./${{ env.temp_dir }} --region ${{ github.event.inputs.region }}
+
+      - name: Deploy bastion host
+        shell: bash
+        run: |
+          kube_cluster_name=$(aws ec2 describe-instances | jq -r '.Reservations[].Instances[].Tags[] | select( .Key | contains("kubernetes.io/cluster/${{ github.event.inputs.clusterConfigName }}"))' | jq -r '.Key' | head -n 1)
+          unique_cluster_id=$(echo $kube_cluster_name | cut -d '/' -f 3-)
+          subnet_id=$(aws ec2 describe-subnets --filters Name=tag:Name,Values=$unique_cluster_id-public-${{ github.event.inputs.region }}a | jq -r '.Subnets[].SubnetId')
+          security_group_id=$(aws ec2 describe-security-groups --filters Name=tag:Name,Values="$unique_cluster_id-worker-sg" | jq -r '.SecurityGroups[].GroupId')
+          echo "kube_cluster_name is: $kube_cluster_name"
+          echo "unique_cluster_id is: $unique_cluster_id"
+          echo "subnet_id is: $subnet_id"
+          echo "security_group_id is: $security_group_id"
+          echo "ami is: ${{ github.event.inputs.ami }}"
+          echo "instance_type is: ${{ github.event.inputs.instance_type }}"
+          echo "Ensure key pair ${{ github.event.inputs.clusterConfigName }} exists"
+          skip_error_if_key_exists=$(aws ec2 import-key-pair --key-name ${{ github.event.inputs.clusterConfigName }} --public-key-material fileb://./${{ env.temp_dir }}/ssh-keys/${{ github.event.inputs.clusterConfigName }}.pub 2>&1) || true
+          echo "deploying Bastion host in AWS"
+          aws ec2 run-instances \
+            --image-id ${{ github.event.inputs.ami }} \
+            --instance-type ${{ github.event.inputs.instance_type }} \
+            --subnet-id "${subnet_id}" \
+            --security-group-ids "${security_group_id}" \
+            --associate-public-ip-address \
+            --key-name ${{ github.event.inputs.clusterConfigName }} \
+            --tag-specifications \
+              "ResourceType=instance,Tags=[{Key=Name,Value=${unique_cluster_id}-bastion},{Key=${kube_cluster_name},Value=owned},{Key=admin,Value=dmuscane@redhat.com}]" \
+              "ResourceType=volume,Tags=[{Key=Name,Value=${unique_cluster_id}-bastion-disk1},{Key=admin,Value=dmuscane@redhat.com}]" | jq . > bastion.json
+          cat bastion.json
+          instance_id=$(jq -r '.Instances[].InstanceId' bastion.json)
+          echo "Now waiting for EC2 instance status to show running"
+          aws ec2 wait instance-running --instance-ids $instance_id | jq .

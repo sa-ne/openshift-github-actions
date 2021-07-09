@@ -1,0 +1,70 @@
+apiVersion: machine.openshift.io/v1beta1
+kind: MachineSet
+metadata:
+  name: ${machineset_name}
+  namespace: openshift-machine-api
+  labels:
+    machine.openshift.io/cluster-api-cluster: ${infrastructure_id}
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      machine.openshift.io/cluster-api-cluster: ${infrastructure_id}
+      machine.openshift.io/cluster-api-machineset: ${machineset_name}
+  template:
+    metadata:
+      labels:
+        machine.openshift.io/cluster-api-cluster: ${infrastructure_id}
+        machine.openshift.io/cluster-api-machine-role: worker
+        machine.openshift.io/cluster-api-machine-type: worker
+        machine.openshift.io/cluster-api-machineset: ${machineset_name}
+    spec:
+      metadata:
+        labels:
+          cluster.ocs.openshift.io/openshift-storage: ""
+      providerSpec:
+        value:
+          userDataSecret:
+            name: worker-user-data
+          placement:
+            availabilityZone: ${zone}
+            region: ${region}
+          credentialsSecret:
+            name: aws-cloud-credentials
+          instanceType: ${flavor}
+          metadata:
+            creationTimestamp: null
+          blockDevices:
+            - ebs:
+                encrypted: true
+                iops: 0
+                kmsKey:
+                  arn: ''
+                volumeSize: 120
+                volumeType: gp2
+          securityGroups:
+            - filters:
+                - name: 'tag:Name'
+                  values:
+                    - ${infrastructure_id}-worker-sg
+          kind: AWSMachineProviderConfig
+          tags:
+            - name: kubernetes.io/cluster/${infrastructure_id}
+              value: owned
+            - name: Contact
+              value: ${email}
+            - name: DeleteBy
+              value: ${delete_by}
+            - name: AlwaysUp
+              value: ${always_up}
+          deviceIndex: 0
+          ami:
+            id: ${ami}
+          subnet:
+            filters:
+              - name: 'tag:Name'
+                values:
+                  - ${infrastructure_id}-private-us-east-2a
+          apiVersion: awsproviderconfig.openshift.io/v1beta1
+          iamInstanceProfile:
+            id: ${infrastructure_id}-worker-profile

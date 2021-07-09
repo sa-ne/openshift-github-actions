@@ -1,0 +1,125 @@
+name: deploy-odf
+
+on:
+  workflow_dispatch:
+    inputs:
+      ocpAPI:
+        description: 'OpenShift API endpoint (i.e. https://api.ocp-15.sandbox1900.opentlc.com:6443)'    
+        required: true
+
+      odfVersion:
+        description: 'OpenShift Data Foundation Version (i.e: 4.6)'    
+        required: true        
+
+      odfSize:
+        description: 'OpenShift Data Foundation DeviceSet Size (i.e: 512Gi)'    
+        required: true              
+        default: 512Gi
+
+      odfNodeFlavor:
+        description: 'Flavor that will be used for ODF Machines'
+        required: true
+        default: "c5.4xlarge"    
+
+jobs:
+  deploy-odf:
+    runs-on: macos-latest
+    env:
+      lcl_install_dir: odf-deployment-${{ github.run_number }}
+
+    steps:
+      - name: "Checkout ${{ github.ref }}"
+        uses: actions/checkout@master
+        with:
+          ref: ${{ github.ref }}
+
+      - name: Install OpenShift CLI
+        uses: redhat-actions/oc-installer@v1
+
+      - name: Authenticate with OpenShift
+        uses: redhat-actions/oc-login@v1
+        with:
+          openshift_server_url: ${{ github.event.inputs.ocpAPI }}
+          openshift_username: ${{ secrets.OC_USER }}
+          openshift_password: ${{ secrets.OC_PASSWORD }}
+          insecure_skip_tls_verify: true
+
+      - name: Deploy MachineSet for ODF
+        shell: bash
+        run: |
+          mkdir -p ./${{ env.lcl_install_dir }}
+          export infrastructure_id=$(oc get -o jsonpath='{.status.infrastructureName}{"\n"}' infrastructure cluster)
+          export region=$(oc get -o jsonpath='{.status.platformStatus.aws.region}{"\n"}' infrastructure cluster)
+          export zone=${region}a
+          export flavor=${{ github.event.inputs.odfNodeFlavor }}
+          export email=${{ secrets.EMAIL }}
+          export ami=$(oc get machineset -n openshift-machine-api -o jsonpath='{.items[0].spec.template.spec.providerSpec.value.ami.id}')
+          export delete_by=NEVER
+          export always_up=false
+          export machineset_name=${infrastructure_id}-storage-${zone}
+          envsubst < ./crd/odf/odf-machineset.yaml >> ./${{ env.lcl_install_dir }}/aws-machineset-odf.yaml
+          oc apply -f ./${{ env.lcl_install_dir }}/aws-machineset-odf.yaml
+          echo "Waiting for ODF MachineSet to become Available..."
+          until oc get machineset ${machineset_name} -n openshift-machine-api -o json | jq -e '(.status.availableReplicas == 3)' | grep -m 1 'true'; do sleep 2; done
+
+
+      - name: Install ODF Operator
+        shell: bash
+        run: |
+
+          export odf_version=${{ github.event.inputs.odfVersion }}
+          envsubst < ./crd/odf/odf-namespace.yaml >> ./${{ env.lcl_install_dir }}/odf-namespace.yaml          
+          envsubst < ./crd/odf/odf-sub.yaml >> ./${{ env.lcl_install_dir }}/odf-sub.yaml
+          envsubst < ./crd/odf/odf-og.yaml >> ./${{ env.lcl_install_dir }}/odf-og.yaml
+
+
+          oc apply -f ./${{ env.lcl_install_dir }}/odf-namespace.yaml
+          oc apply -f ./${{ env.lcl_install_dir }}/odf-sub.yaml
+          oc apply -f ./${{ env.lcl_install_dir }}/odf-og.yaml
+
+          sleep 60
+          oc project openshift-storage
+          TIMEOUT=0 
+          subs_status=$(oc get csv -n openshift-storage -o jsonpath='{.items[0].status.phase}')
+          while [ "$subs_status" != "Succeeded" ]; do
+            echo "Operator still being deployed. Waiting one more minute..."
+            sleep 60
+
+            if [ $TIMEOUT -gt 15 ]; then #15 MINUTES TIMEOUT
+              echo "Timeout reached... Check the status of the operator deployment on OpenShift."
+              exit 1
+            fi
+            TIMEOUT=$(($TIMEOUT+1))
+            subs_status=$(oc get csv -n openshift-storage -o jsonpath='{.items[0].status.phase}')
+          done
+          
+          echo "Operator Deployment Finished"
+
+      - name: Deploy ODF StorageCluster
+        shell: bash
+        run: |
+          export odf_size=${{ github.event.inputs.odfSize }}
+          envsubst < ./crd/odf/odf-storagecluster.yaml >> ./${{ env.lcl_install_dir }}/odf-storagecluster.yaml        
+          oc apply -f ./${{ env.lcl_install_dir }}/odf-storagecluster.yaml 
+          sleep 120 # WAITING 2 MINUTES FOR ODF DEPLOYMENT
+
+      - name: Verify ODF status
+        shell: bash
+        run: |
+          TIMEOUT=0 
+
+          status=$(oc get StorageCluster ocs-storagecluster -n openshift-storage -o jsonpath='{.status.phase}')
+          while [ "$status" != "Ready" ]; do
+            echo "Deployment in progress. Waiting one more minute..."
+            sleep 60
+
+            if [ $TIMEOUT -gt 15 ]; then #15 MINUTES TIMEOUT
+              echo "Timeout reached... Check the status of the deployment on OpenShift."
+              exit 1
+            fi
+            TIMEOUT=$(($TIMEOUT+1))
+            status=$(oc get StorageCluster ocs-storagecluster -n openshift-storage -o jsonpath='{.status.phase}')
+          done
+          
+          echo "Deployment Finished"
+
