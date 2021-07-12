@@ -13,7 +13,7 @@ on:
         description: 'sub domain to create cert for, will be combined with base domain secret'
         required: true
       s3_storage:
-        description: 'AWS S3 storage bucket name (i.e. ocp-s3-storage)'
+        description: 'AWS S3 storage bucket name'
         required: true
       baseDomain:
         description: 'Base domain to deploy the cluster (i.e. sandbox772.opentlc.com)'
