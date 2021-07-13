@@ -3,6 +3,9 @@ name: prepull-windows-container-image
 on:
   workflow_dispatch:
     inputs:
+      region:
+        description: 'AWS Region'
+        required: true
       containerImage:
         description: 'Image name and tag that is used for docker pull'
         required: true
