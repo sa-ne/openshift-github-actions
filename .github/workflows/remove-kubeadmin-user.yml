@@ -3,8 +3,11 @@ name: remove-kubeadmin-user
 on:
   workflow_dispatch:
     inputs:
-      subDomain:
-        description: 'sub domain to create cert for, will be combined with base domain secret'
+      clusterConfigName:
+        description: 'Folder name of cluster config in S3 to pull down for auth.  Example: ocp-[run_number]'
+        required: true
+      baseDomain:
+        description: 'Base domain to deploy the cluster (i.e. sandbox772.opentlc.com)'
         required: true
       s3_storage:
         description: 'AWS S3 storage bucket name'
@@ -16,6 +19,10 @@ on:
 jobs:
   remove-kubeadmin-user:
     runs-on: macos-latest
+    env:
+      temp_dir: "temp-${{ github.run_number }}"
+      ocpAPI: "https://api.${{ github.event.inputs.clusterConfigName }}.${{ github.event.inputs.baseDomain }}:6443"
+
     steps:
       - name: "Checkout ${{ github.ref }}"
         uses: actions/checkout@master
@@ -32,14 +39,31 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: "${{ github.event.inputs.region }}"
 
+      - name: Get S3 bucket
+        shell: bash
+        run: |
+          mkdir -p ./${{ env.temp_dir }}
+          echo "Downloading ${{ github.event.inputs.clusterConfigName }} metadata files from S3..."
+          aws s3 sync s3://${{ github.event.inputs.s3_storage }}/${{ github.event.inputs.clusterConfigName }}/auth ./ --region ${{ github.event.inputs.region }}
+          ls -la ./
+          kube_pw=`cat ./kubeadmin-password`
+          echo "kubeadmin_pw=${kube_pw}" >> $GITHUB_ENV
+
+      - name: Authenticate with OpenShift
+        uses: redhat-actions/oc-login@v1
+        with:
+          openshift_server_url: ${{ env.ocpAPI }}
+          openshift_username: kubeadmin
+          openshift_password: ${{ env.kubeadmin_pw }}
+          insecure_skip_tls_verify: true
+
       - name: Use htpasswd as oauth, add OC_USER as cluster admin and removing kubeadmin user
         shell: bash
         run: |
-          aws s3 cp s3://${{ github.event.inputs.s3_storage }}/${{ github.event.inputs.subDomain }}/auth ./ --region ${{ github.event.inputs.region }} --quiet
-          export KUBECONFIG=./auth/kubeconfig
-          oc login -u ${{ secrets.OCP_INIT_USER }} -p ${{ secrets.OC_INIT_PASSWORD }}
-          htpasswd -c -B -b users.htpasswd ${{ secrets.OC_USER }} ${{ secrets.OC_PASSWORD }}
-          oc create secret generic htpass-secret --from-file=htpasswd=./users.htpasswd> -n openshift-config
+          echo "Verify by running oc get nodes:"
+          oc get nodes
+          htpasswd -c -B -b ./users.htpasswd ${{ secrets.OC_USER }} ${{ secrets.OC_PASSWORD }}
+          oc create secret generic htpass-secret --from-file=htpasswd=./users.htpasswd -n openshift-config
           oc apply -f ./crd/htpasswd-oauth.yml
           oc create clusterrolebinding registry-controller --clusterrole=cluster-admin --user=${{ secrets.OC_USER }}
           oc adm policy add-cluster-role-to-user cluster-admin ${{ secrets.OC_USER }}

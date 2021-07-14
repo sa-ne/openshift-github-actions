@@ -102,7 +102,7 @@ Please see the e-mail you received to set the following:
 
 Inputs:
 `region`
-`Base domain to deploy the cluster (i.e. sandbox772.opentlc.com)`
+`baseDomain`
 
 Secrets:
 `AWS_ACCESS_KEY_ID`
@@ -115,7 +115,7 @@ Secrets:
 #### To support Windows containers
 For a cluster that supports Windows containers, update the `networkType` to `OVNKubernetes` when inputting parameters for the `deploy-openshift` Action.  
 
-_NOTE:_ No Windows machineSets are deployed with this workflow.
+_NOTE:_ No Windows machineSets are deployed with the `deploy-openshift` workflow.
 
 ---
 
@@ -137,59 +137,55 @@ _NOTE:_ No Windows machineSets are deployed with this workflow.
 
 ### deploy-bastion-host
 
-The OpenShift Container Platform installer does not create any public IP addresses for any of the Amazon Elastic Compute Cloud (Amazon EC2) instances that it provisions for your OpenShift Container Platform cluster. To be able to SSH to your OpenShift Container Platform hosts, you must provision a Bastion (jump box) host.
+- The workflow assumes you used the `deploy-openshift` workflow to provision the cluster.  It will copy down the S3 bucket and use the key located in the `/ssh-keys/` folder for the key pair.
+- This workflow will provision a Bastion host in AWS with a public IP.  
+- To SSH into the Bastion host, use the key from the `/ssh-keys/` folder for the cluster.
 
-This workflow will provision a Bastion host in AWS with a public IP.  The workflow assumes you have used the `deploy-openshift` workflow to provision the cluster.  It will copy down the S3 bucket and use the key located in the `/ssh-keys/` folder for the key pair.
-
-To SSH into the Bastion host, use the key from the `/ssh-keys/` folder for the cluster.
+_NOTE: The OpenShift Container Platform installer does not create any public IP addresses for any of the Amazon Elastic Compute Cloud (Amazon EC2) instances that it provisions for your OpenShift Container Platform cluster. To be able to SSH to your OpenShift Container Platform hosts, you must provision a Bastion (jump box) host._
 
 ---
 ### configure-ssl-cert
 
-**This job still needs to be tested**
+**NOTE: `OC_USER` and `OC_PASSWORD` must be a valid openshift login to run this Action**
 
-Assuming the cluster is in AWS, using route 53 this job will use certbot + let's encrypt to act as a CA to sign the certificate.  
+- Assuming the cluster is in AWS, using route 53 this job will use certbot + let's encrypt to act as a CA to sign the certificate.  
 
-The certificate that is provisioned with OpenShift, while it is encrypted, it will show "un-secure" on a browser until signed by a CA due to how the certificate chain works.
+_NOTE: The certificate that is provisioned with OpenShift, while it is encrypted, it will show "un-secure" on a browser until signed by a CA due to how the certificate chain works._
 
 ---
 
 ### remove-kubeadmin-user
 
-**This job still needs to be tested**
-
 - Removes the kubeadmin user
 - Sets htpasswd as oauth
-- Uses the OC_USER and OC_PASSWORD secrets to configure a new user.
+- Uses the `OC_USER` and `OC_PASSWORD` secrets to configure a new user.
 
 ---
 
 ### remove-cluster
 
-Destroy an OpenShift cluster using the metadata files from the deployment sourced from S3.
+- Destroy an OpenShift cluster using the metadata files from the deployment sourced from S3.
 
 ---
 
 ### force-remove-cluster
 
-Destroy an OpenShift cluster without relying on any metadata from the original deployment.  It is a destroy hack!
+- Destroy an OpenShift cluster without relying on any metadata from the original deployment.  It is a destroy hack!
 
 ---
 
 ### prepull-windows-image
 
 - Pre-pull the Windows container image on the MachineSet.
+- This workflow assumes you have the metadata from the install and the ssh key used to configure the WMCO in S3.
 
-
-Until the timeout is increased to 30 minutes for pulling an image, all Windows images need to be pulled in advance of the container deployment
-
-This workflow assumes you have the metadata from the install and the ssh key used to configure the WMCO in S3.
+_NOTE: Until the timeout is increased to 30 minutes for pulling an image, all Windows images need to be pulled in advance of the container deployment_
 
 ---
 
 ### deploy-netcandystore
 
-Deploy the [NetCandy Store](http://people.redhat.com/chernand/windows-containers-quickstart/ns-intro/) a mixed environment consisting of Windows Containers and Linux Containers using helm.
+- Deploy the [NetCandy Store](http://people.redhat.com/chernand/windows-containers-quickstart/ns-intro/) a mixed environment consisting of Windows Containers and Linux Containers using helm.
 
 _NOTE: The helm install supports Windows Server 2019 Datacenter 1809_
 
@@ -207,6 +203,7 @@ This application consists of:
 
 - Yes, absolutely!
 
+---
 ##### What is the difference between the `s3_storage` input and the `clusterConfigName`?
 
 - The `s3_storage` input refers to the bucket name, this **MUST be unique to the region where the storage bucket is created**.
@@ -214,12 +211,14 @@ This application consists of:
 
 ![s3 screen grab](/assets/images/s3_storage_example.png)
 
+---
 ##### Where can I find my pull-secret?
 
 Login to [cloud.redhat.com](cloud.redhat.com), select `OpenShift`, then `Downloads` and scroll to the bottom of the page where `Tokens` are listed.  Hit the `copy` button and then paste into your `PULL_SECRET` repository secret.
 
 ![pull secret](/assets/images/pull_secret.png)
 
+---
 ##### How do I login to my OpenShift instance locally after using the `deploy-openshift` action?
 
 - The console URL will be output in Apply ssl cert against OpenShift step.
@@ -245,6 +244,7 @@ After logging in, you can copy and paste the `oc login command`
 
 ![tokens](/assets/images/tokens.png)
 
+---
 
 ##### The `openshift-deploy` action is failing with AddressLimitExceeded
 
@@ -252,6 +252,7 @@ If you are using an RHPDS Open Environment Elastic IPs are limited to 5.  You ma
 
 ![elastic IPs exceeded](/assets/images/elastic_IPs_exceeded.png)
 
+---
 ##### Invalid AMI
 Every few months AWS updates AMI's, you may get an error if AWS removes an older AMI.   While we do our best to ensure the default AMI's are available, you may hit this issue before we do.  Please open a pull request or issue if you run into this!
 
