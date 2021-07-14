@@ -6,14 +6,11 @@ on:
       region:
         description: 'AWS Region'
         required: true
-      email:
-        description: 'email to associate with certbot request'
-        required: true
-      subDomain:
-        description: 'sub domain to create cert for, will be combined with base domain secret'
-        required: true
       s3_storage:
         description: 'AWS S3 storage bucket name'
+        required: true
+      clusterConfigName:
+        description: 'Cluster name (i.e. ocp-[run-number])'
         required: true
       baseDomain:
         description: 'Base domain to deploy the cluster (i.e. sandbox772.opentlc.com)'
@@ -49,7 +46,7 @@ jobs:
       - name: Run certbot against route53 to generate certs
         shell: bash
         env:
-          domain_for_cert: "*.apps.${{ github.event.inputs.subDomain }}.${{ github.event.inputs.baseDomain }}"
+          domain_for_cert: "*.apps.${{ github.event.inputs.clusterConfigName }}.${{ github.event.inputs.baseDomain }}"
         run: |
           certbot certonly \
             --dns-route53 \
@@ -64,8 +61,9 @@ jobs:
       - name: Apply ssl cert against OpenShift
         shell: bash
         env:
-          cert_name: "apps.${{ github.event.inputs.subDomain }}.${{ github.event.inputs.baseDomain }}"
-          server_name: "https://api.${{ github.event.inputs.subDomain }}.${{ github.event.inputs.baseDomain }}:6443"
+          cert_name: "apps.${{ github.event.inputs.clusterConfigName }}.${{ github.event.inputs.baseDomain }}"
+          fullchain_path: "${{github.workspace}}/certbot-config/live/${{ env.cert_name }}/fullchain.pem"
+          privkey_path: "${{github.workspace}}/certbot-config/live/${{ env.cert_name }}/privkey.pem"
         run: |
           mkdir -p ./${{ env.temp_dir }}
           aws s3 sync s3://${{ github.event.inputs.s3_storage }}/${{ github.event.inputs.clusterConfigName }} ./${{ env.temp_dir }} --region "${{ github.event.inputs.region }}" 
