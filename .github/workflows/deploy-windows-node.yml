@@ -100,7 +100,7 @@ jobs:
           oc project openshift-windows-machine-config-operator
           oc apply -f ./${{ env.lcl_install_dir }}/prepull-image.yaml
           echo "Waiting for Windows image pull to complete..."
-          oc wait --for=condition=complete --timeout=300s job/pre-pull-windows-image-${{ github.run_number }}
+          oc wait --for=condition=complete --timeout=900s job/pre-pull-windows-image-${{ github.run_number }}
 
       - name: Deploy Windows container
         shell: bash

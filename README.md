@@ -70,6 +70,7 @@ To populate the Actions on your fork, they must be enabled.
 **[deploy-acm](#deploy-acm)**<br>
 **[deploy-odf](#deploy-odf)**<br>
 **[deploy-bastion-host](#deploy-bastion-host)**<br>
+**[deploy-windows-node](#deploy-windows-node)**<br>
 
 **Configuration Actions**
 
@@ -144,11 +145,22 @@ _NOTE:_ No Windows machineSets are deployed with the `deploy-openshift` workflow
 _NOTE: The OpenShift Container Platform installer does not create any public IP addresses for any of the Amazon Elastic Compute Cloud (Amazon EC2) instances that it provisions for your OpenShift Container Platform cluster. To be able to SSH to your OpenShift Container Platform hosts, you must provision a Bastion (jump box) host._
 
 ---
+
+### deploy-windows-node
+
+- Use this job to configure the cluster to run Windows containers.  Ensure `OVNKubernetes` is the networking type for your cluster, Windows containers will not work if `OpenShiftSDN` was selected.
+- Deploys and configures WMCO (Windows Machine Config Operator)
+- Generates SSH key to associate with WMCO and stores it in the S3 storage bucket listed as an input parameter
+- Deploys Windows MachineSet
+- Pre-pulls Windows Image required for Windows Container IIS example.  _NOTE: All Windows Images MUST be pre-pulled at this time or else a timeout error will occur when trying to deploy the container_
+- Deploys sample IIS container
+
+---
 ### configure-ssl-cert
 
 **NOTE: `OC_USER` and `OC_PASSWORD` must be a valid openshift login to run this Action**
 
-- Assuming the cluster is in AWS, using route 53 this job will use certbot + let's encrypt to act as a CA to sign the certificate.  
+- Assuming the cluster is in AWS, using route 53 this job will use certbot + let's encrypt to act as a CA to sign the certificate.
 
 _NOTE: The certificate that is provisioned with OpenShift, while it is encrypted, it will show "un-secure" on a browser until signed by a CA due to how the certificate chain works._
 
