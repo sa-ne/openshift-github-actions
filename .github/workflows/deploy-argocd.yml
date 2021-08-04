@@ -1,0 +1,57 @@
+name: deploy-argocd
+
+on:
+  workflow_dispatch:
+    inputs:
+      ocpAPI:
+        description: 'OpenShift API endpoint (eg. https://api.ocp-15.sandbox1900.opentlc.com:6443)'    
+        required: true   
+
+jobs:
+  deploy-argocd:
+    runs-on: macos-latest
+    env:
+      lcl_install_dir: argocd-deployment-${{ github.run_number }}
+
+    steps:
+      - name: "Checkout ${{ github.ref }}"
+        uses: actions/checkout@master
+        with:
+          ref: ${{ github.ref }}
+
+      - name: Install OpenShift CLI
+        uses: redhat-actions/oc-installer@v1
+
+      - name: Authenticate with OpenShift
+        uses: redhat-actions/oc-login@v1
+        with:
+          openshift_server_url: ${{ github.event.inputs.ocpAPI }}
+          openshift_username: ${{ secrets.OC_USER }}
+          openshift_password: ${{ secrets.OC_PASSWORD }}
+          insecure_skip_tls_verify: true
+
+      - name: Install ArgoCD
+        shell: bash
+        run: |
+          oc apply -f ./crd/argocd/argocd-sub.yaml
+
+          sleep 60
+          oc project openshift-gitops
+          TIMEOUT=0 
+          argo_status=$(oc get argocd -n openshift-gitops -o jsonpath='{.items[0].status.server}')
+          while [ "$argo_status" != "Running" ]; do
+            echo "ArgoCD operator still being deployed. Waiting one more minute..."
+            sleep 60
+
+            if [ $TIMEOUT -gt 15 ]; then #15 MINUTES TIMEOUT
+              echo "Timeout reached... Check the status of ArgoCD deployment on OpenShift."
+              exit 1
+            fi
+            TIMEOUT=$(($TIMEOUT+1))
+            argo_status=$(oc get argocd -n openshift-gitops -o jsonpath='{.items[0].status.server}')
+          done
+
+          argocd_url=$(oc get route openshift-gitops-server -n openshift-gitops -o jsonpath='{.spec.host}')
+
+          echo "ArgoCD is installed and available at \"https://$argocd_url\""
+          echo "Check the initial password for the admin user by running this command on your OpenShift cluster: \"oc extract secret/openshift-gitops-cluster -n openshift-gitops --to=-\""
