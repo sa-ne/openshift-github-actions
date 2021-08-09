@@ -221,7 +221,7 @@ jobs:
     needs: deploy-openshift
     runs-on: macos-latest
     env:
-      ocp_url: "https://console-openshift-console.apps.${{ github.event.inputs.clusterNamePrefix }}-${{ github.run_number }}.${{ github.event.inputs.baseDomain }}"
+      ocp_url: "https://api.${{ github.event.inputs.clusterNamePrefix }}-${{ github.run_number }}.${{ github.event.inputs.baseDomain }}:6443"
 
     steps:
       - name: "Checkout ${{ github.ref }}"
@@ -240,7 +240,7 @@ jobs:
           openshift_password: ${{ secrets.OC_PASSWORD }}
           insecure_skip_tls_verify: true
 
-      - name: Installing ArgoCD
+      - name: Deploying ArgoCD
         shell: bash
         run: |
           oc apply -f ./crd/argocd/argocd-sub.yaml
@@ -267,7 +267,7 @@ jobs:
           echo "Check the initial password by running this command on your OpenShift cluster: \"oc extract secret/openshift-gitops-cluster -n openshift-gitops --to=-\""          
 
   deploy-quay-with-argo:
-    name: "Deploying Quay using with GitOps using ArgoCD"
+    name: "Deploying Quay with GitOps using ArgoCD"
     needs: [deploy-openshift, deploy-argocd]
     runs-on: macos-latest
     env:
@@ -307,7 +307,7 @@ jobs:
           echo "Quay Install Finished"
 
   deploy-acm-with-argo:
-    name: "Deploying ACM using with GitOps using ArgoCD"
+    name: "Deploying ACM with GitOps using ArgoCD"
     needs: [deploy-openshift, deploy-argocd]  
     runs-on: macos-latest
     env:
@@ -347,7 +347,7 @@ jobs:
           echo "ACM Install Finished"
 
   deploy-acs-with-argo:
-    name: "Deploying ACS using with GitOps using ArgoCD"
+    name: "Deploying ACS with GitOps using ArgoCD"
     needs: [deploy-openshift, deploy-argocd]    
     runs-on: macos-latest
     env:
