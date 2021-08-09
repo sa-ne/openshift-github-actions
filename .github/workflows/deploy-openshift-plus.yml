@@ -1,4 +1,4 @@
-name: deploy-openshift
+name: deploy-openshift-plus
 
 on:
   workflow_dispatch:
