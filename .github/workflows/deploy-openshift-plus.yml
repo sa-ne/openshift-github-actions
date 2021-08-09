@@ -452,6 +452,8 @@ jobs:
           echo -e "OpenShift Plus Deployment Finished with success. \n\n" > $CRED_FILE_NAME
           echo -e  "*** OPENSHIFT URL: $ocp_console" >> $CRED_FILE_NAME
           echo -e  "*** OPENSHIFT CREDENTIALS: ${{ secrets.OC_USER }} - ${{ secrets.OC_PASSWORD }} \n\n" >> $CRED_FILE_NAME
+          echo -e  "*** ARGOCD URL: $argo_url" >> $CRED_FILE_NAME
+          echo -e  "*** ARGOCD CREDENTIALS: admin - $argo_credentials \n\n" >> $CRED_FILE_NAME          
           echo -e  "*** ACM URL: $acm_url" >> $CRED_FILE_NAME
           echo -e  "*** ACM CREDENTIALS: ${{ secrets.OC_USER }} - ${{ secrets.OC_PASSWORD }} \n\n" >> $CRED_FILE_NAME
           echo -e  "*** ACS URL: $acs_central_url" >> $CRED_FILE_NAME
