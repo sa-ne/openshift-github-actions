@@ -1,0 +1,381 @@
+name: deploy-openshift
+
+on:
+  workflow_dispatch:
+    inputs:
+      region:
+        description: 'AWS Region to deploy cluster to'
+        required: true
+      s3_storage:
+        description: 'S3 storage bucket name to save installation config files'
+        required: true
+      ocpVersion:
+        description: 'OpenShift version to be installed (stable, 4.7.17)'
+        required: true
+        default: 'stable'
+      baseDomain:
+        description: 'Base domain to deploy the cluster (i.e. sandbox772.opentlc.com)'
+        required: true
+      clusterNamePrefix:
+        description: 'Cluster name prefix will get combined with the github run number'
+        required: true
+        default: 'ocp'
+      numWorkers:
+        description: 'Number of workers to deploy on the cluster'
+        required: true
+        default: '3'
+      workersFlavor:
+        description: 'Workers default size (m5.2xlarge recommended for OpenShift Plus)'
+        required: true
+        default: 'm5.2xlarge'
+      networkType:
+        description: 'Network type to deploy for cluster (OpenShiftSDN, OVNKubernetes)'
+        required: true
+        default: 'OpenShiftSDN'
+
+jobs:
+  deploy-openshift:
+    runs-on: macos-latest
+    env:
+      lcl_install_dir: ${{ github.event.inputs.clusterNamePrefix }}-${{ github.run_number }}
+      kubeconfig_path: "${{github.workspace}}/${{ github.event.inputs.clusterNamePrefix }}-${{ github.run_number }}/auth/kubeconfig"
+      numMasters: 3
+      hostPrefix: '23'
+      cidrClusterNetwork: '10.128.0.0/14'
+      serviceNetwork: '172.30.0.0/16'
+      cidrMachineNetwork: '10.0.0.0/16'
+      cidrhybridClusterNetwork: '10.132.0.0/14'
+
+    steps:
+      - name: "Checkout ${{ github.ref }}"
+        uses: actions/checkout@master
+        with:
+          ref: ${{ github.ref }}
+
+      - name: Install OpenShift CLI
+        uses: redhat-actions/oc-installer@v1
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: "${{ secrets.AWS_ACCESS_KEY_ID }}"
+          aws-secret-access-key: "${{ secrets.AWS_SECRET_ACCESS_KEY }}"
+          aws-region: "${{ github.event.inputs.region }}"
+
+      - name: Create S3 bucket
+        shell: bash
+        run: |
+          aws_ls_result=$(aws s3 ls "s3://${{ github.event.inputs.s3_storage }}" 2>&1) || true
+
+          if [[ $aws_ls_result = *NoSuchBucket* ]]
+          then
+            echo " *** ${{ github.event.inputs.s3_storage }} BUCKET DOESN'T EXIST YET. CREATING S3 BUCKET... *** "
+            if [ "${{ github.event.inputs.region }}" = "us-east-1" ]; 
+            then
+              aws s3api create-bucket --bucket ${{ github.event.inputs.s3_storage }} --region ${{ github.event.inputs.region }} --acl private 
+            else
+              aws s3api create-bucket --bucket ${{ github.event.inputs.s3_storage }} --create-bucket-configuration LocationConstraint=${{ github.event.inputs.region }} --acl private 
+            fi
+            aws s3api put-public-access-block --bucket ${{ github.event.inputs.s3_storage }} --public-access-block-configuration "BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true"
+            echo "S3 Bucket ${{ github.event.inputs.s3_storage }} created on region ${{ github.event.inputs.region }}"
+          elif [[ $aws_ls_result = *AccessDenied* ]]
+          then 
+            echo " *** GOT ACCESS DENIED ERROR! REVIEW THE BUCKET NAME, WHICH MUST BE UNIQUE AND NOT CONTAIN SPACES OR UPPERCASE LETTERS. *** "
+          else
+            echo " *** ${{ github.event.inputs.s3_storage }} BUCKET ALREADY EXISTS *** "
+          fi
+
+      - name: Create SSH key for cluster
+        shell: bash
+        run: |
+          echo "\n *** VARS USED IN THIS STEP *** "
+          echo "lcl_install_dir is: ${{ env.lcl_install_dir }}"
+          echo " ********************************* \n"
+          mkdir -p ./${{ env.lcl_install_dir }}/ssh-keys/
+          ssh-keygen -t rsa -b 4096 -q -N "" -f "./${{ env.lcl_install_dir }}/ssh-keys/${{ env.lcl_install_dir }}"
+          aws s3 sync ./${{ env.lcl_install_dir }}/ssh-keys/ s3://${{ github.event.inputs.s3_storage }}/${{ env.lcl_install_dir }}/ssh-keys/
+
+      - name: Parameterize install-config.yaml
+        shell: bash
+        env:
+          s3_config_path: "${{ github.event.inputs.s3_storage }}/ocp-install-configs"
+          clusterName: "${{ github.event.inputs.clusterNamePrefix }}-${{ github.run_number }}"
+        run: |
+          export pullSecret='${{ secrets.PULL_SECRET }}'
+          export sshKey=$(cat "./${{ env.lcl_install_dir }}/ssh-keys/${{ env.lcl_install_dir }}.pub")
+          export region=${{ github.event.inputs.region }}
+          export email=${{ secrets.EMAIL }}
+          export delete_by=NEVER
+          export always_up=false
+          export baseDomain=${{ github.event.inputs.baseDomain }}
+          export numMasters=${{ env.numMasters }}
+          export numWorkers=${{ github.event.inputs.numWorkers }}
+          export workersFlavor=${{ github.event.inputs.workersFlavor }}
+          export hostPrefix=${{ env.hostPrefix }}
+          export networkType=${{ github.event.inputs.networkType }}
+          export clusterName=${{ env.clusterName }}
+          export cidrClusterNetwork=${{ env.cidrClusterNetwork }}
+          export cidrMachineNetwork=${{ env.cidrMachineNetwork }}
+          export serviceNetwork=${{ env.serviceNetwork }}
+          envsubst < ./install-configs/install-config-template.yaml > ./${{ env.lcl_install_dir }}/install-config.yaml
+          aws s3 sync ./${{ env.lcl_install_dir }}/ s3://${{ github.event.inputs.s3_storage }}/${{ env.lcl_install_dir }}/
+
+      - name: Download OpenShift installer and update permissions
+        shell: bash
+        run: |
+          mkdir -p ./${{ env.lcl_install_dir }}
+          echo "Downloading OpenShift Installer..."
+          wget -q https://mirror.openshift.com/pub/openshift-v4/clients/ocp/${{ github.event.inputs.ocpVersion }}/openshift-install-mac.tar.gz
+          tar -xvzf openshift-install-mac.tar.gz
+          echo "Update permissions to executable on the openshift-installer..."
+          chmod +x ./openshift-install
+          echo "OCP_VERSION=$(./openshift-install version | head -n 1)" >> $GITHUB_ENV
+
+      - name: Create manifests
+        shell: bash
+        run: |
+          echo "Create OpenShift manifests...\n"
+          ./openshift-install --dir=./${{ env.lcl_install_dir }} create manifests
+
+      - name: Parameterize cluster-network-03-config file
+        if: github.event.inputs.networkType == 'OVNKubernetes'
+        shell: bash
+        env:
+          s3_config_path: "${{ github.event.inputs.s3_storage }}/ocp-install-configs"
+        run: |
+          export hostPrefix=${{ env.hostPrefix }}
+          export cidrClusterNetwork=${{ env.cidrClusterNetwork }}
+          export serviceNetwork=${{ env.serviceNetwork }}
+          export cidrhybridClusterNetwork=${{ env.cidrhybridClusterNetwork }}
+          envsubst < ./install-configs/cluster-network-03-config-template.yaml > ./${{ env.lcl_install_dir }}/manifests/cluster-network-03-config.yaml
+          aws s3 sync ./${{ env.lcl_install_dir }}/ s3://${{ github.event.inputs.s3_storage }}/${{ env.lcl_install_dir }}/
+          if [ ! -f ./${{ env.lcl_install_dir }}/manifests/cluster-network-03-config.yml ]; then echo "cluster-network-03-config.yaml does not exist." exit 1; else echo "cluster-network-03-config.yaml exists, continuing deployment..."; fi
+
+      - name: Create ignition configs
+        shell: bash
+        run: |
+          ./openshift-install create ignition-configs --dir=./${{ env.lcl_install_dir }}
+
+      - name: Run OCP installer - create cluster
+        shell: bash
+        run: | 
+          echo "Starting Install of $OCP_VERSION"
+          echo "Deployment ETA ~40 minutes..."
+           ./openshift-install --dir=./${{ env.lcl_install_dir }} create cluster --log-level=warn
+          echo "Uploading install files to S3 for: ${{ env.lcl_install_dir }}"
+          aws s3 sync ./${{ env.lcl_install_dir }} s3://${{ github.event.inputs.s3_storage }}/${{ env.lcl_install_dir }}
+
+      - name: Remove kubeadmin user
+        shell: bash
+        run: |
+          export KUBECONFIG=$(pwd)/${{ env.lcl_install_dir }}/auth/kubeconfig
+          echo "KUBECONFIG env var is: $KUBECONFIG"
+          echo "Verify by running oc get nodes:"
+          oc get nodes
+          htpasswd -c -B -b ./users.htpasswd ${{ secrets.OC_USER }} ${{ secrets.OC_PASSWORD }}
+          oc create secret generic htpass-secret --from-file=htpasswd=./users.htpasswd -n openshift-config
+          oc apply -f ./crd/htpasswd-oauth.yml
+          oc create clusterrolebinding registry-controller --clusterrole=cluster-admin --user=${{ secrets.OC_USER }}
+          oc adm policy add-cluster-role-to-user cluster-admin ${{ secrets.OC_USER }}
+          oc delete secrets kubeadmin -n kube-system
+
+      - name:  install certbot + aws-route53-extension
+        shell: bash
+        run: |
+          brew install certbot
+          pip3 install certbot-dns-route53
+
+      - name: Run certbot against route53 to generate certs
+        shell: bash
+        env:
+          domain_for_cert: "*.apps.${{ github.event.inputs.clusterNamePrefix }}-${{ github.run_number }}.${{ github.event.inputs.baseDomain }}"
+        run: |
+          certbot certonly \
+            --dns-route53 \
+            --config-dir ./certbot-config \
+            --logs-dir ./certbot/logs \
+            --work-dir ./certbot/work \
+            --agree-tos \
+            --non-interactive \
+            --email ${{ secrets.EMAIL }} \
+            -d "${{ env.domain_for_cert }}"
+
+      - name: Apply ssl cert against OpenShift
+        shell: bash
+        env:
+          cert_name: "apps.${{ github.event.inputs.clusterNamePrefix }}-${{ github.run_number }}.${{ github.event.inputs.baseDomain }}"
+          fullchain_path: "${{github.workspace}}/certbot-config/live/${{ env.cert_name }}/fullchain.pem"
+          privkey_path: "${{github.workspace}}/certbot-config/live/${{ env.cert_name }}/privkey.pem"
+        run: |
+          export KUBECONFIG=$(pwd)/${{ env.lcl_install_dir }}/auth/kubeconfig
+          fullchain="${{github.workspace}}/certbot-config/live/${{ env.cert_name }}/fullchain.pem"
+          privkey="${{github.workspace}}/certbot-config/live/${{ env.cert_name }}/privkey.pem"
+          oc create secret tls router-certs --cert=$fullchain --key=$privkey -n openshift-ingress
+          oc patch ingresscontroller default -n openshift-ingress-operator --type=merge --patch='{"spec": { "defaultCertificate": { "name": "router-certs" }}}'
+          echo "OpenShift login available at: https://console-openshift-console.apps.${{ github.event.inputs.clusterNamePrefix }}-${{ github.run_number }}.${{ github.event.inputs.baseDomain }}"
+
+
+  deploy-argocd:
+    runs-on: macos-latest
+    env:
+      ocp_url: "https://console-openshift-console.apps.${{ github.event.inputs.clusterNamePrefix }}-${{ github.run_number }}.${{ github.event.inputs.baseDomain }}"
+
+    steps:
+      - name: "Checkout ${{ github.ref }}"
+        uses: actions/checkout@master
+        with:
+          ref: ${{ github.ref }}
+
+      - name: Install OpenShift CLI
+        uses: redhat-actions/oc-installer@v1
+
+      - name: Authenticate with OpenShift
+        uses: redhat-actions/oc-login@v1
+        with:
+          openshift_server_url: ${{ env.ocp_url }}
+          openshift_username: ${{ secrets.OC_USER }}
+          openshift_password: ${{ secrets.OC_PASSWORD }}
+          insecure_skip_tls_verify: true
+
+      - name: Installing ArgoCD
+        shell: bash
+        run: |
+          oc apply -f ./crd/argocd/argocd-sub.yaml
+
+          sleep 60
+          oc project openshift-gitops
+          TIMEOUT=0 
+          argo_status=$(oc get argocd -n openshift-gitops -o jsonpath='{.items[0].status.server}')
+          while [ "$argo_status" != "Running" ]; do
+            echo "ArgoCD operator still being deployed. Waiting one more minute..."
+            sleep 60
+
+            if [ $TIMEOUT -gt 15 ]; then #15 MINUTES TIMEOUT
+              echo "Timeout reached... Check the status of ArgoCD deployment on OpenShift."
+              exit 1
+            fi
+            TIMEOUT=$(($TIMEOUT+1))
+            argo_status=$(oc get argocd -n openshift-gitops -o jsonpath='{.items[0].status.server}')
+          done
+
+          argocd_url=$(oc get route openshift-gitops-server -n openshift-gitops -o jsonpath='{.spec.host}')
+
+          echo "ArgoCD is installed and available at \"https://$argocd_url\""
+          echo "Check the initial password by running this command on your OpenShift cluster: \"oc extract secret/openshift-gitops-cluster -n openshift-gitops --to=-\""          
+
+  deploy-quay-with-argo:
+    runs-on: macos-latest
+    env:
+      ocp_url: "https://api.${{ github.event.inputs.clusterNamePrefix }}-${{ github.run_number }}.${{ github.event.inputs.baseDomain }}:6443"
+
+    steps:
+      - name: "Checkout ${{ github.ref }}"
+        uses: actions/checkout@master
+        with:
+          ref: ${{ github.ref }}
+
+      - name: Install OpenShift CLI
+        uses: redhat-actions/oc-installer@v1
+
+      - name: Authenticate with OpenShift
+        uses: redhat-actions/oc-login@v1
+        with:
+          openshift_server_url: ${{ env.ocp_url }}
+          openshift_username: ${{ secrets.OC_USER }}
+          openshift_password: ${{ secrets.OC_PASSWORD }}
+          insecure_skip_tls_verify: true
+
+      - name: Set permissions required for ArgoCD
+        shell: bash
+        run: |
+          oc adm policy add-cluster-role-to-user cluster-admin system:serviceaccount:openshift-gitops:openshift-gitops-argocd-application-controller
+
+      - name: Install Quay with GitOps using ArgoCD
+        shell: bash
+        run: |
+          
+          git clone https://github.com/giofontana/argocd-ocp.git
+
+          cd argocd-ocp/quay
+          ./deploy-quay-with-argo.sh
+
+          echo "Quay Install Finished"
+
+  deploy-acm-with-argo:
+    runs-on: macos-latest
+    env:
+      ocp_url: "https://api.${{ github.event.inputs.clusterNamePrefix }}-${{ github.run_number }}.${{ github.event.inputs.baseDomain }}:6443"
+
+    steps:
+      - name: "Checkout ${{ github.ref }}"
+        uses: actions/checkout@master
+        with:
+          ref: ${{ github.ref }}
+
+      - name: Install OpenShift CLI
+        uses: redhat-actions/oc-installer@v1
+
+      - name: Authenticate with OpenShift
+        uses: redhat-actions/oc-login@v1
+        with:
+          openshift_server_url: ${{ env.ocp_url }}
+          openshift_username: ${{ secrets.OC_USER }}
+          openshift_password: ${{ secrets.OC_PASSWORD }}
+          insecure_skip_tls_verify: true
+
+      - name: Set permissions required for ArgoCD
+        shell: bash
+        run: |
+          oc adm policy add-cluster-role-to-user cluster-admin system:serviceaccount:openshift-gitops:openshift-gitops-argocd-application-controller
+
+      - name: Install ACM with GitOps using ArgoCD
+        shell: bash
+        run: |
+          
+          git clone https://github.com/giofontana/argocd-ocp.git
+
+          cd argocd-ocp/acm
+          ./deploy-acm-with-argo.sh '${{ secrets.PULL_SECRET }}'
+
+          echo "ACM Install Finished"
+
+  deploy-acs-with-argo:
+    runs-on: macos-latest
+    env:
+      ocp_url: "https://api.${{ github.event.inputs.clusterNamePrefix }}-${{ github.run_number }}.${{ github.event.inputs.baseDomain }}:6443"
+
+    steps:
+      - name: "Checkout ${{ github.ref }}"
+        uses: actions/checkout@master
+        with:
+          ref: ${{ github.ref }}
+
+      - name: Install OpenShift CLI
+        uses: redhat-actions/oc-installer@v1
+
+      - name: Authenticate with OpenShift
+        uses: redhat-actions/oc-login@v1
+        with:
+          openshift_server_url: ${{ env.ocp_url }}
+          openshift_username: ${{ secrets.OC_USER }}
+          openshift_password: ${{ secrets.OC_PASSWORD }}
+          insecure_skip_tls_verify: true
+
+      - name: Set permissions required for ArgoCD
+        shell: bash
+        run: |
+          oc adm policy add-cluster-role-to-user cluster-admin system:serviceaccount:openshift-gitops:openshift-gitops-argocd-application-controller
+
+      - name: Install ACS (Stackrox) with GitOps using ArgoCD
+        shell: bash
+        run: |
+          
+          git clone https://github.com/giofontana/argocd-ocp.git
+
+          cd argocd-ocp/acs
+          ./deploy-acs-with-argo.sh
+
+          echo "ACS Install Finished"
+
+
+
