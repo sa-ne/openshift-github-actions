@@ -245,8 +245,7 @@ jobs:
         run: |
           oc apply -f ./crd/argocd/argocd-sub.yaml
 
-          sleep 60
-          oc project openshift-gitops
+          sleep 120
           TIMEOUT=0 
           argo_status=$(oc get argocd -n openshift-gitops -o jsonpath='{.items[0].status.server}')
           while [ "$argo_status" != "Running" ]; do
@@ -377,4 +376,71 @@ jobs:
           echo "ACS Install Finished"
 
 
+# aws_identity=$(aws sts get-caller-identity)
+# aws_account=`echo $aws_identity | jq -r '.Account'`
+# aws_username=`echo $aws_identity | jq -r '.Arn' | cut -d'/' -f2`
+
+# https://s3.console.aws.amazon.com/s3/buckets/${{ github.event.inputs.s3_storage }}?region=${{ github.event.inputs.region }}&prefix=${{ github.event.inputs.clusterNamePrefix }}-${{ github.run_number }}/
+
+
+  upload-data-to-s3:
+    name: "Uploading URLs and Credentials to S3"
+    needs: [deploy-openshift, deploy-argocd, deploy-quay-with-argo, deploy-acm-with-argo, deploy-acs-with-argo]
+    runs-on: macos-latest
+    env:
+      ocp_url: "https://api.${{ github.event.inputs.clusterNamePrefix }}-${{ github.run_number }}.${{ github.event.inputs.baseDomain }}:6443"
+
+
+    steps:
+      - name: "Checkout ${{ github.ref }}"
+        uses: actions/checkout@master
+        with:
+          ref: ${{ github.ref }}
+
+      - name: Install OpenShift CLI
+        uses: redhat-actions/oc-installer@v1
+
+      - name: Authenticate with OpenShift
+        uses: redhat-actions/oc-login@v1
+        with:
+          openshift_server_url: ${{ env.ocp_url }}
+          openshift_username: ${{ secrets.OC_USER }}
+          openshift_password: ${{ secrets.OC_PASSWORD }}
+          insecure_skip_tls_verify: true
+
+      - name: Get URLs and Credentials
+        shell: bash
+        run: |
+          
+          ocp_console="https://console-openshift-console.apps.${{ github.event.inputs.clusterNamePrefix }}-${{ github.run_number }}.${{ github.event.inputs.baseDomain }}"
+
+          argo_url="https://$(oc get route openshift-gitops-server -n openshift-gitops -o jsonpath='{.spec.host}')"
+          argo_credentials="https://$(oc get route openshift-gitops-server -n openshift-gitops -o jsonpath='{.spec.host}')"
+
+          acm_url="https://$(oc get route multicloud-console -n openshift-advanced-cluster-mgmt  -o jsonpath='{.spec.host}')"
+          
+          acs_central_url="https://$(oc -n stackrox get route central -o jsonpath='{.spec.host}')"
+          acs_credentials=$(oc -n stackrox get secret central-htpasswd -o go-template='{{index .data "password" | base64decode}}')
+
+          quay_registry_url="https://$(oc get route quay-registry-quay -n openshift-operators -o jsonpath='{.spec.host}')"
+
+          aws_identity=$(aws sts get-caller-identity)
+          aws_account=`echo $aws_identity | jq -r '.Account'`
+          
+          CRED_FILE_NAME="ocp-credentials.txt"
+
+          echo -e "OpenShift Plus Deployment Finished with success. \n\n" > $CRED_FILE_NAME
+          echo -e  "*** OPENSHIFT URL: $ocp_console" >> $CRED_FILE_NAME
+          echo -e  "*** OPENSHIFT CREDENTIALS: ${{ secrets.OC_USER }} - ${{ secrets.OC_PASSWORD }} \n\n" >> $CRED_FILE_NAME
+          echo -e  "*** ACM URL: $acm_url" >> $CRED_FILE_NAME
+          echo -e  "*** ACM CREDENTIALS: ${{ secrets.OC_USER }} - ${{ secrets.OC_PASSWORD }} \n\n" >> $CRED_FILE_NAME
+          echo -e  "*** ACS URL: $acs_central_url" >> $CRED_FILE_NAME
+          echo -e  "*** ACS CREDENTIALS: admin - $acs_credentials \n\n" >> $CRED_FILE_NAME          
+          echo -e  "*** QUAY URL: $quay_registry_url" >> $CRED_FILE_NAME
+          echo -e  "*** QUAY CREDENTIALS: << CREATE A NEW USER BY CLICKING IN \"Create Account\" LINK ON QUAY'S LOGON PAGE >> \n\n" >> $CRED_FILE_NAME         
+
+          aws s3 sync ./${{ env.lcl_install_dir }} s3://${{ github.event.inputs.s3_storage }}/${{ env.lcl_install_dir }}
+
+          echo "URLs and Credentials are available at S3 https://s3.console.aws.amazon.com/s3/buckets/${{ github.event.inputs.s3_storage }}?region=${{ github.event.inputs.region }}&prefix=${{ github.event.inputs.clusterNamePrefix }}-${{ github.run_number }}/ocp-credentials.txt"
+          echo "Note: On AWS Logon Page select \"IAM user\" and use this Account ID: $aws_account with the username and password you received from RHPDS."
 
