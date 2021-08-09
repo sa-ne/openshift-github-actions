@@ -450,7 +450,7 @@ jobs:
           aws_identity=$(aws sts get-caller-identity)
           aws_account=`echo $aws_identity | jq -r '.Account'`
           
-          CRED_FILE_NAME="ocp-credentials.txt"
+          CRED_FILE_NAME="$(pwd)/${{ env.lcl_install_dir }}/ocp-credentials.txt"
 
           echo -e "OpenShift Plus Deployment Finished with success. \n\n" > $CRED_FILE_NAME
           echo -e  "*** OPENSHIFT URL: $ocp_console" >> $CRED_FILE_NAME
