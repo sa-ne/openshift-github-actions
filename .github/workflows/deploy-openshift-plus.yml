@@ -221,6 +221,7 @@ jobs:
     needs: deploy-openshift
     runs-on: macos-latest
     env:
+      lcl_install_dir: ${{ github.event.inputs.clusterNamePrefix }}-${{ github.run_number }}
       ocp_url: "https://api.${{ github.event.inputs.clusterNamePrefix }}-${{ github.run_number }}.${{ github.event.inputs.baseDomain }}:6443"
 
     steps:
@@ -232,17 +233,10 @@ jobs:
       - name: Install OpenShift CLI
         uses: redhat-actions/oc-installer@v1
 
-      - name: Authenticate with OpenShift
-        uses: redhat-actions/oc-login@v1
-        with:
-          openshift_server_url: ${{ env.ocp_url }}
-          openshift_username: ${{ secrets.OC_USER }}
-          openshift_password: ${{ secrets.OC_PASSWORD }}
-          insecure_skip_tls_verify: true
-
       - name: Deploying ArgoCD
         shell: bash
         run: |
+          export KUBECONFIG=$(pwd)/${{ env.lcl_install_dir }}/auth/kubeconfig
           oc apply -f ./crd/argocd/argocd-sub.yaml
 
           sleep 120
@@ -275,6 +269,7 @@ jobs:
     needs: [deploy-openshift, deploy-argocd]
     runs-on: macos-latest
     env:
+      lcl_install_dir: ${{ github.event.inputs.clusterNamePrefix }}-${{ github.run_number }}
       ocp_url: "https://api.${{ github.event.inputs.clusterNamePrefix }}-${{ github.run_number }}.${{ github.event.inputs.baseDomain }}:6443"
 
     steps:
@@ -286,18 +281,10 @@ jobs:
       - name: Install OpenShift CLI
         uses: redhat-actions/oc-installer@v1
 
-      - name: Authenticate with OpenShift
-        uses: redhat-actions/oc-login@v1
-        with:
-          openshift_server_url: ${{ env.ocp_url }}
-          openshift_username: ${{ secrets.OC_USER }}
-          openshift_password: ${{ secrets.OC_PASSWORD }}
-          insecure_skip_tls_verify: true
-
       - name: Install Quay with GitOps using ArgoCD
         shell: bash
         run: |
-          
+          export KUBECONFIG=$(pwd)/${{ env.lcl_install_dir }}/auth/kubeconfig
           git clone https://github.com/giofontana/argocd-ocp.git
 
           cd argocd-ocp/quay
@@ -310,6 +297,7 @@ jobs:
     needs: [deploy-openshift, deploy-argocd]  
     runs-on: macos-latest
     env:
+      lcl_install_dir: ${{ github.event.inputs.clusterNamePrefix }}-${{ github.run_number }}
       ocp_url: "https://api.${{ github.event.inputs.clusterNamePrefix }}-${{ github.run_number }}.${{ github.event.inputs.baseDomain }}:6443"
 
     steps:
@@ -321,18 +309,10 @@ jobs:
       - name: Install OpenShift CLI
         uses: redhat-actions/oc-installer@v1
 
-      - name: Authenticate with OpenShift
-        uses: redhat-actions/oc-login@v1
-        with:
-          openshift_server_url: ${{ env.ocp_url }}
-          openshift_username: ${{ secrets.OC_USER }}
-          openshift_password: ${{ secrets.OC_PASSWORD }}
-          insecure_skip_tls_verify: true
-
       - name: Install ACM with GitOps using ArgoCD
         shell: bash
         run: |
-          
+          export KUBECONFIG=$(pwd)/${{ env.lcl_install_dir }}/auth/kubeconfig
           git clone https://github.com/giofontana/argocd-ocp.git
 
           cd argocd-ocp/acm
@@ -345,6 +325,7 @@ jobs:
     needs: [deploy-openshift, deploy-argocd]    
     runs-on: macos-latest
     env:
+      lcl_install_dir: ${{ github.event.inputs.clusterNamePrefix }}-${{ github.run_number }}
       ocp_url: "https://api.${{ github.event.inputs.clusterNamePrefix }}-${{ github.run_number }}.${{ github.event.inputs.baseDomain }}:6443"
 
     steps:
@@ -356,18 +337,10 @@ jobs:
       - name: Install OpenShift CLI
         uses: redhat-actions/oc-installer@v1
 
-      - name: Authenticate with OpenShift
-        uses: redhat-actions/oc-login@v1
-        with:
-          openshift_server_url: ${{ env.ocp_url }}
-          openshift_username: ${{ secrets.OC_USER }}
-          openshift_password: ${{ secrets.OC_PASSWORD }}
-          insecure_skip_tls_verify: true
-
       - name: Install ACS (Stackrox) with GitOps using ArgoCD
         shell: bash
         run: |
-          
+          export KUBECONFIG=$(pwd)/${{ env.lcl_install_dir }}/auth/kubeconfig
           git clone https://github.com/giofontana/argocd-ocp.git
 
           cd argocd-ocp/acs
@@ -380,8 +353,8 @@ jobs:
     needs: [deploy-openshift, deploy-argocd, deploy-quay-with-argo, deploy-acm-with-argo, deploy-acs-with-argo]
     runs-on: macos-latest
     env:
+      lcl_install_dir: ${{ github.event.inputs.clusterNamePrefix }}-${{ github.run_number }}
       ocp_url: "https://api.${{ github.event.inputs.clusterNamePrefix }}-${{ github.run_number }}.${{ github.event.inputs.baseDomain }}:6443"
-
 
     steps:
       - name: "Checkout ${{ github.ref }}"
@@ -392,18 +365,10 @@ jobs:
       - name: Install OpenShift CLI
         uses: redhat-actions/oc-installer@v1
 
-      - name: Authenticate with OpenShift
-        uses: redhat-actions/oc-login@v1
-        with:
-          openshift_server_url: ${{ env.ocp_url }}
-          openshift_username: ${{ secrets.OC_USER }}
-          openshift_password: ${{ secrets.OC_PASSWORD }}
-          insecure_skip_tls_verify: true
-
       - name: Get URLs and Credentials
         shell: bash
         run: |
-          
+          export KUBECONFIG=$(pwd)/${{ env.lcl_install_dir }}/auth/kubeconfig          
           ocp_console="https://console-openshift-console.apps.${{ github.event.inputs.clusterNamePrefix }}-${{ github.run_number }}.${{ github.event.inputs.baseDomain }}"
 
           argo_url="https://$(oc get route openshift-gitops-server -n openshift-gitops -o jsonpath='{.spec.host}')"
