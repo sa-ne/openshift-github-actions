@@ -446,10 +446,7 @@ jobs:
           acs_credentials=$(oc -n stackrox get secret central-htpasswd -o go-template='{{index .data "password" | base64decode}}')
 
           quay_registry_url="https://$(oc get route quay-registry-quay -n openshift-operators -o jsonpath='{.spec.host}')"
-
-          aws_identity=$(aws sts get-caller-identity)
-          aws_account=`echo $aws_identity | jq -r '.Account'`
-          
+         
           CRED_FILE_NAME="$(pwd)/${{ env.lcl_install_dir }}/ocp-credentials.txt"
 
           echo -e "OpenShift Plus Deployment Finished with success. \n\n" > $CRED_FILE_NAME
@@ -465,5 +462,5 @@ jobs:
           aws s3 sync ./${{ env.lcl_install_dir }} s3://${{ github.event.inputs.s3_storage }}/${{ env.lcl_install_dir }}
 
           echo "URLs and Credentials are available at S3 https://s3.console.aws.amazon.com/s3/buckets/${{ github.event.inputs.s3_storage }}?region=${{ github.event.inputs.region }}&prefix=${{ github.event.inputs.clusterNamePrefix }}-7/ocp-credentials.txt"
-          echo "Note: On AWS Logon Page select \"IAM user\" and use this Account ID: $aws_account with the username and password you received from RHPDS."
+          echo "Note: On AWS Logon Page select \"IAM user\" and use the AWS Account ID, Username and Password you received from RHPDS."
 
