@@ -438,7 +438,7 @@ jobs:
           ocp_console="https://console-openshift-console.apps.${{ github.event.inputs.clusterNamePrefix }}-${{ github.run_number }}.${{ github.event.inputs.baseDomain }}"
 
           argo_url="https://$(oc get route openshift-gitops-server -n openshift-gitops -o jsonpath='{.spec.host}')"
-          argo_credentials="https://$(oc get route openshift-gitops-server -n openshift-gitops -o jsonpath='{.spec.host}')"
+          argo_credentials="$(oc extract secret/openshift-gitops-cluster -n openshift-gitops --to=-)"
 
           acm_url="https://$(oc get route multicloud-console -n openshift-advanced-cluster-mgmt  -o jsonpath='{.spec.host}')"
           
