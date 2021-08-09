@@ -375,14 +375,6 @@ jobs:
 
           echo "ACS Install Finished"
 
-
-# aws_identity=$(aws sts get-caller-identity)
-# aws_account=`echo $aws_identity | jq -r '.Account'`
-# aws_username=`echo $aws_identity | jq -r '.Arn' | cut -d'/' -f2`
-
-# https://s3.console.aws.amazon.com/s3/buckets/${{ github.event.inputs.s3_storage }}?region=${{ github.event.inputs.region }}&prefix=${{ github.event.inputs.clusterNamePrefix }}-${{ github.run_number }}/
-
-
   upload-data-to-s3:
     name: "Uploading URLs and Credentials to S3"
     needs: [deploy-openshift, deploy-argocd, deploy-quay-with-argo, deploy-acm-with-argo, deploy-acs-with-argo]
