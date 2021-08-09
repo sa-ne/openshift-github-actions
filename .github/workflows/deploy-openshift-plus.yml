@@ -266,6 +266,11 @@ jobs:
           echo "ArgoCD is installed and available at \"https://$argocd_url\""
           echo "Check the initial password by running this command on your OpenShift cluster: \"oc extract secret/openshift-gitops-cluster -n openshift-gitops --to=-\""          
 
+      - name: Set permissions required for ArgoCD
+        shell: bash
+        run: |
+          oc adm policy add-cluster-role-to-user cluster-admin system:serviceaccount:openshift-gitops:openshift-gitops-argocd-application-controller
+
   deploy-quay-with-argo:
     name: "Deploying Quay with GitOps using ArgoCD"
     needs: [deploy-openshift, deploy-argocd]
@@ -289,11 +294,6 @@ jobs:
           openshift_username: ${{ secrets.OC_USER }}
           openshift_password: ${{ secrets.OC_PASSWORD }}
           insecure_skip_tls_verify: true
-
-      - name: Set permissions required for ArgoCD
-        shell: bash
-        run: |
-          oc adm policy add-cluster-role-to-user cluster-admin system:serviceaccount:openshift-gitops:openshift-gitops-argocd-application-controller
 
       - name: Install Quay with GitOps using ArgoCD
         shell: bash
@@ -330,11 +330,6 @@ jobs:
           openshift_password: ${{ secrets.OC_PASSWORD }}
           insecure_skip_tls_verify: true
 
-      - name: Set permissions required for ArgoCD
-        shell: bash
-        run: |
-          oc adm policy add-cluster-role-to-user cluster-admin system:serviceaccount:openshift-gitops:openshift-gitops-argocd-application-controller
-
       - name: Install ACM with GitOps using ArgoCD
         shell: bash
         run: |
@@ -369,11 +364,6 @@ jobs:
           openshift_username: ${{ secrets.OC_USER }}
           openshift_password: ${{ secrets.OC_PASSWORD }}
           insecure_skip_tls_verify: true
-
-      - name: Set permissions required for ArgoCD
-        shell: bash
-        run: |
-          oc adm policy add-cluster-role-to-user cluster-admin system:serviceaccount:openshift-gitops:openshift-gitops-argocd-application-controller
 
       - name: Install ACS (Stackrox) with GitOps using ArgoCD
         shell: bash
