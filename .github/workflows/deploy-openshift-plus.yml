@@ -275,6 +275,7 @@ jobs:
       - name: Set permissions required for ArgoCD
         shell: bash
         run: |
+          export KUBECONFIG=$(pwd)/${{ env.lcl_install_dir }}/auth/kubeconfig
           oc adm policy add-cluster-role-to-user cluster-admin system:serviceaccount:openshift-gitops:openshift-gitops-argocd-application-controller
 
   deploy-quay-with-argo:
