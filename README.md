@@ -130,6 +130,7 @@ _NOTE:_ No Windows machineSets are deployed with the `deploy-openshift` workflow
 - Using ArgoCD it deploys ACM, ACS and Quay
 - Upload the `credentials.txt` file to S3 containing the URLs and Credentials generated during ACM/ACS and Quay deployment
 
+---
 
 ### deploy-acm
 
