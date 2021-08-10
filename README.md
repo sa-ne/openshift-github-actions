@@ -67,8 +67,12 @@ To populate the Actions on your fork, they must be enabled.
 **Deployment Actions**
 
 **[deploy-openshift](#deploy-openshift)**<br>
+**[deploy-argocd](#deploy-argocd)**<br>
 **[deploy-acm](#deploy-acm)**<br>
+**[deploy-acm-with-argo](#deploy-acm-with-argo)**<br>
 **[deploy-odf](#deploy-odf)**<br>
+**[deploy-acs-with-argo](#deploy-acs-with-argo)**<br>
+**[deploy-quay-with-argo](#deploy-quay-with-argo)**<br>
 **[deploy-bastion-host](#deploy-bastion-host)**<br>
 
 **Configuration Actions**
@@ -119,6 +123,14 @@ _NOTE:_ No Windows machineSets are deployed with the `deploy-openshift` workflow
 
 ---
 
+### deploy-openshift-plus
+
+- Deploy OpenShift using the same workflow as [deploy-openshift](#deploy-openshift)
+- Also deploy ArgoCD
+- Using ArgoCD it deploys ACM, ACS and Quay
+- Upload the `credentials.txt` file to S3 containing the URLs and Credentials generated during ACM/ACS and Quay deployment
+
+
 ### deploy-acm
 
 - Deploys the ACM operator
@@ -132,6 +144,34 @@ _NOTE:_ No Windows machineSets are deployed with the `deploy-openshift` workflow
 - Deploys a new MachineSet to provision 3 new servers for ODF
 - Deploys the OpenShift Data Foundation (aka OCS) operator
 - Deploys a StorageCluster instance to install ODF
+
+---
+
+### deploy-argocd
+
+- Deploys the OpenShift GitOps operator and installs ArgoCD on project openshift-gitops
+- After deployment the initial password for admin user can be obtained running this command: `oc extract secret/openshift-gitops-cluster -n openshift-gitops --to=-`
+
+---
+
+### deploy-acm-with-argo
+
+- Also deploys Advanced Cluster Management (ACM) but using ArgoCD
+- ArgoCD is required to be already installed and running on openshift-gitops project
+
+---
+
+### deploy-acs-with-argo
+
+- Deploys Advanced Cluster Security (ACS/Stackrox) using ArgoCD
+- ArgoCD is required to be already installed and running on openshift-gitops project
+
+---
+
+### deploy-quay-with-argo
+
+- Deploys Quay using ArgoCD
+- ArgoCD is required to be already installed and running on openshift-gitops project
 
 ---
 
