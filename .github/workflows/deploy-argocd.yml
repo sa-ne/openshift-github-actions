@@ -35,8 +35,7 @@ jobs:
         run: |
           oc apply -f ./crd/argocd/argocd-sub.yaml
 
-          sleep 60
-          oc project openshift-gitops
+          sleep 120
           TIMEOUT=0 
           argo_status=$(oc get argocd -n openshift-gitops -o jsonpath='{.items[0].status.server}')
           while [ "$argo_status" != "Running" ]; do
