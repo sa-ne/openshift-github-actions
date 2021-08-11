@@ -67,6 +67,7 @@ To populate the Actions on your fork, they must be enabled.
 **Deployment Actions**
 
 **[deploy-openshift](#deploy-openshift)**<br>
+**[deploy-openshift-plus](#deploy-openshift-plus)**<br>
 **[deploy-argocd](#deploy-argocd)**<br>
 **[deploy-acm](#deploy-acm)**<br>
 **[deploy-acm-with-argo](#deploy-acm-with-argo)**<br>
