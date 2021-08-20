@@ -1,0 +1,49 @@
+name: deploy-acs-with-argo
+
+on:
+  workflow_dispatch:
+    inputs:
+      ocpAPI:
+        description: 'OpenShift API endpoint (eg. https://api.ocp-15.sandbox1900.opentlc.com:6443)'    
+        required: true
+
+jobs:
+  deploy-acs-with-argo:
+    runs-on: macos-latest
+    env:
+      lcl_install_dir: windows-node-deployment-${{ github.run_number }}
+
+    steps:
+      - name: "Checkout ${{ github.ref }}"
+        uses: actions/checkout@master
+        with:
+          ref: ${{ github.ref }}
+
+      - name: Install OpenShift CLI
+        uses: redhat-actions/oc-installer@v1
+
+      - name: Authenticate with OpenShift
+        uses: redhat-actions/oc-login@v1
+        with:
+          openshift_server_url: ${{ github.event.inputs.ocpAPI }}
+          openshift_username: ${{ secrets.OC_USER }}
+          openshift_password: ${{ secrets.OC_PASSWORD }}
+          insecure_skip_tls_verify: true
+
+      - name: Set permissions required for ArgoCD
+        shell: bash
+        run: |
+          oc adm policy add-cluster-role-to-user cluster-admin system:serviceaccount:openshift-gitops:openshift-gitops-argocd-application-controller
+
+      - name: Install ACS (Stackrox) with GitOps using ArgoCD
+        shell: bash
+        run: |
+          
+          git clone https://github.com/giofontana/argocd-ocp.git
+
+          cd argocd-ocp/acs
+          ./deploy-acs-with-argo.sh
+
+          echo "ACS Install Finished"
+
+

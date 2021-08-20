@@ -208,7 +208,6 @@ jobs:
           privkey_path: "${{github.workspace}}/certbot-config/live/${{ env.cert_name }}/privkey.pem"
         run: |
           export KUBECONFIG=$(pwd)/${{ env.lcl_install_dir }}/auth/kubeconfig
-          oc login -u ${{ secrets.OC_USER }} -p ${{ secrets.OC_PASSWORD }}
           fullchain="${{github.workspace}}/certbot-config/live/${{ env.cert_name }}/fullchain.pem"
           privkey="${{github.workspace}}/certbot-config/live/${{ env.cert_name }}/privkey.pem"
           oc create secret tls router-certs --cert=$fullchain --key=$privkey -n openshift-ingress
