@@ -41,7 +41,7 @@ jobs:
           
           git clone https://github.com/giofontana/argocd-ocp.git
 
-          cd argocd-ocp/acm
+          cd argocd-ocp
           ./deploy-acm-with-argo.sh '${{ secrets.PULL_SECRET }}'
 
           echo "ACM Install Finished"

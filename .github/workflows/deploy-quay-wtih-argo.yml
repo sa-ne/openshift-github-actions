@@ -41,7 +41,7 @@ jobs:
           
           git clone https://github.com/giofontana/argocd-ocp.git
 
-          cd argocd-ocp/quay
+          cd argocd-ocp
           ./deploy-quay-with-argo.sh
 
           echo "Quay Install Finished"
