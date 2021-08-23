@@ -41,7 +41,7 @@ jobs:
           
           git clone https://github.com/giofontana/argocd-ocp.git
 
-          cd argocd-ocp/acs
+          cd argocd-ocp
           ./deploy-acs-with-argo.sh
 
           echo "ACS Install Finished"

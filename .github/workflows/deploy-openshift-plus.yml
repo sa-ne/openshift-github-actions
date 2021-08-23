@@ -314,7 +314,7 @@ jobs:
           export KUBECONFIG=$(pwd)/${{ env.lcl_install_dir }}/auth/kubeconfig
           git clone https://github.com/giofontana/argocd-ocp.git
 
-          cd argocd-ocp/quay
+          cd argocd-ocp
           ./deploy-quay-with-argo.sh
 
           echo "Quay Install Finished"
@@ -355,7 +355,7 @@ jobs:
           export KUBECONFIG=$(pwd)/${{ env.lcl_install_dir }}/auth/kubeconfig
           git clone https://github.com/giofontana/argocd-ocp.git
 
-          cd argocd-ocp/acm
+          cd argocd-ocp
           ./deploy-acm-with-argo.sh '${{ secrets.PULL_SECRET }}'
 
           echo "ACM Install Finished"
@@ -396,7 +396,7 @@ jobs:
           export KUBECONFIG=$(pwd)/${{ env.lcl_install_dir }}/auth/kubeconfig
           git clone https://github.com/giofontana/argocd-ocp.git
 
-          cd argocd-ocp/acs
+          cd argocd-ocp
           ./deploy-acs-with-argo.sh
 
           echo "ACS Install Finished"
