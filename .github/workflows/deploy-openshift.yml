@@ -20,6 +20,14 @@ on:
         description: 'Cluster name prefix will get combined with the github run number'
         required: true
         default: 'ocp'
+      numMasters:
+        description: 'Number of masters to deploy on the cluster'
+        required: true
+        default: '3'        
+      mastersFlavor:
+        description: 'Masters default size'
+        required: true
+        default: 'm5.xlarge'     
       numWorkers:
         description: 'Number of workers to deploy on the cluster'
         required: true
@@ -109,6 +117,7 @@ jobs:
           export always_up=false
           export baseDomain=${{ github.event.inputs.baseDomain }}
           export numMasters=${{ env.numMasters }}
+          export mastersFlavor=${{ github.event.inputs.mastersFlavor }}          
           export numWorkers=${{ github.event.inputs.numWorkers }}
           export workersFlavor=${{ github.event.inputs.workersFlavor }}
           export hostPrefix=${{ env.hostPrefix }}
