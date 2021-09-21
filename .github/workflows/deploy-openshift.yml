@@ -47,7 +47,6 @@ jobs:
     env:
       lcl_install_dir: ${{ github.event.inputs.clusterNamePrefix }}-${{ github.run_number }}
       kubeconfig_path: "${{github.workspace}}/${{ github.event.inputs.clusterNamePrefix }}-${{ github.run_number }}/auth/kubeconfig"
-      numMasters: 3
       hostPrefix: '23'
       cidrClusterNetwork: '10.128.0.0/14'
       serviceNetwork: '172.30.0.0/16'
@@ -116,7 +115,7 @@ jobs:
           export delete_by=NEVER
           export always_up=false
           export baseDomain=${{ github.event.inputs.baseDomain }}
-          export numMasters=${{ env.numMasters }}
+          export numMasters=${{ github.event.inputs.numMasters }}
           export mastersFlavor=${{ github.event.inputs.mastersFlavor }}          
           export numWorkers=${{ github.event.inputs.numWorkers }}
           export workersFlavor=${{ github.event.inputs.workersFlavor }}
