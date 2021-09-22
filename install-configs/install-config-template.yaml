@@ -12,7 +12,9 @@ controlPlane:
   architecture: amd64
   hyperthreading: Enabled
   name: master
-  platform: {}
+  platform: 
+    aws:
+      type: ${mastersFlavor}
   replicas: ${numMasters}
 metadata:
   creationTimestamp: null

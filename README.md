@@ -101,6 +101,8 @@ To populate the Actions on your fork, they must be enabled.
 - SSH keys are generated, keys are sent to the S3 storage bucket.
 - The OpenShift cluster certificate, by default will encrypt traffic.  However it is not signed by a CA so it will appear insecure in the browser.  If you check the cert on [SSL checker](https://www.sslshopper.com/ssl-checker.html), it will show secure until the very end of the chain by default.  This job will finish securing the certificate by using Let's Encrypt via the route53 plugin.
 
+_NOTE:_ It is possible to deploy a single node cluster if you set the number of masters to 1 and workers for 0.
+
 #### For use with RHPDS Open Environments
 
 Please see the e-mail you received to set the following:
